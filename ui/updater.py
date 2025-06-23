@@ -68,7 +68,7 @@ def draw_updater(layout):
     """Draw updater UI in the given layout"""
     # Updater Section
     box = layout.box()
-    box.label(text="Addon Updater", icon="URL")
+    box.label(text="Updater", icon="URL")
     
     # Create mock self object for the updater functions
     mock_self = MockSelf(box)
