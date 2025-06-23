@@ -17,6 +17,7 @@ class Hoyo2VRCImport(Operator):
         """
         bpy.ops.hoyo2vrc_import.fbx(
             "INVOKE_DEFAULT",
+            my_scale=100,
             my_rotation_mode="XYZ",
             use_reset_mesh_origin=False,
             my_edge_smoothing="Blender",

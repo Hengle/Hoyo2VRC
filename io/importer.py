@@ -1455,9 +1455,13 @@ def parse_ik_dic(ik_dic, tokens):
     ik_dic[key] = [tokens[2], tokens[3], int(tokens[4])]
 
 
-def read_some_data(context, filepath, my_leaf_bone, my_import_normal, my_shade_mode, use_auto_smooth, my_angle, use_auto_bone_orientation, my_bone_length, my_calculate_roll, use_vertex_animation, use_edge_crease, my_edge_crease_scale, my_edge_smoothing, use_import_materials, obj_name, my_rotation_mode, use_detect_deform_bone, use_fix_bone_poses, use_attach_to_selected_armature, my_animation_offset, use_animation_prefix, primary_bone_axis, secondary_bone_axis):
+def read_some_data(imported_directory_path, context, filepath, my_leaf_bone, my_import_normal, my_shade_mode, use_auto_smooth, my_angle, use_auto_bone_orientation, my_bone_length, my_calculate_roll, use_vertex_animation, use_edge_crease, my_edge_crease_scale, my_edge_smoothing, use_import_materials, obj_name, my_rotation_mode, use_detect_deform_bone, use_fix_bone_poses, use_attach_to_selected_armature, my_animation_offset, use_animation_prefix, primary_bone_axis, secondary_bone_axis):
     print("running read_some_data...")
     print("="*30)
+
+    directory_path = imported_directory_path
+    print(f"Directory path: {directory_path}")
+
     frame_rate = 30.0
     hierarchy_dic = {}
     node_dic = {}
@@ -1485,6 +1489,7 @@ def read_some_data(context, filepath, my_leaf_bone, my_import_normal, my_shade_m
     ik_dic = {}
     camera_key_dic = {}
     max_uv = [0.0, 0.0]
+
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
             line = line.strip("\r\n")
@@ -1699,6 +1704,23 @@ def read_some_data(context, filepath, my_leaf_bone, my_import_normal, my_shade_m
     # remove the armature
     if use_attach_to_selected_armature and selected_armature != None:
         remove_armatures_and_meshes_from_scene(context, hierarchy_dic, node_dic)
+
+    # Store directory path on armature object or first mesh if no armature
+    found_object = False
+    for obj in context.scene.objects:
+        if obj.type == 'ARMATURE':
+            obj["import_dir"] = directory_path
+            print(f"Stored import directory on armature: {directory_path}")
+            found_object = True
+            break
+    
+    if not found_object:
+        for obj in context.scene.objects:
+            if obj.type == 'MESH':
+                obj["import_dir"] = directory_path
+                print(f"No armature found. Stored import directory on first mesh: {directory_path}")
+                break
+
     print("="*30)
 
     return {'FINISHED'}
@@ -1717,9 +1739,12 @@ class Hoyo2VRCImportFbx(Operator, ImportHelper):
     bl_label = "Hoyo Import FBX"
     bl_options = {'UNDO', 'PRESET'}
 
-    # Define regex patterns as class variables
-    GI_PATTERN = r"^(Cs_Avatar|Avatar|NPC_Avatar)_(Boy|Girl|Lady|Male|Loli)_(Sword|Claymore|Bow|Catalyst|Pole|Undefined)_([a-zA-Z]+)(?<!_\d{2})$"
-    HI3_PATTERN = r"^(Avatar|Assister)_\w+?_C\d+(_\w+)$"
+    # Define regex pattern as class variable
+    WUWA_PATTERN = r"^(R2T1\w+|NH\w+)$"
+
+    # Store imported file paths
+    imported_file_path: str = ""
+    imported_directory_path: str = ""
 
     @classmethod
     def poll(self, context):
@@ -1998,14 +2023,16 @@ class Hoyo2VRCImportFbx(Operator, ImportHelper):
         if self.filepath:
             filename = Path(self.filepath).stem
             
-            if re.match(self.GI_PATTERN, filename) or re.match(self.HI3_PATTERN, filename):
-                # Force settings for Genshin models
+            if re.match(self.WUWA_PATTERN, filename):
+                # Force settings for Wuthering Waves models
+                self.use_auto_bone_orientation = True
+                self.primary_bone_axis = 'Y'
+                self.secondary_bone_axis = 'X'
+            else:
+                # Default settings for other models
                 self.use_auto_bone_orientation = False
                 self.primary_bone_axis = 'X'
                 self.secondary_bone_axis = 'Y'
-            else:
-                # Default settings for other models
-                self.use_auto_bone_orientation = True
 
     def draw(self, context):
         layout = self.layout
@@ -2038,12 +2065,11 @@ class Hoyo2VRCImportFbx(Operator, ImportHelper):
         
         # Get filename for checking
         filename = Path(self.filepath).stem if self.filepath else ""
-        is_genshin = bool(re.match(self.GI_PATTERN, filename))
-        is_hi3 = bool(re.match(self.HI3_PATTERN, filename))
+        is_wuwa = bool(re.match(self.WUWA_PATTERN, filename))
         
         row = box.row()
         row.prop(self, 'use_auto_bone_orientation')
-        row.enabled = not is_genshin and not is_hi3
+        row.enabled = not is_wuwa
         
         row = box.row()
         row.prop(self, 'primary_bone_axis')
@@ -2055,7 +2081,7 @@ class Hoyo2VRCImportFbx(Operator, ImportHelper):
         
         row = box.row()
         row.prop(self, 'my_calculate_roll')
-        row.enabled = self.use_auto_bone_orientation and not is_genshin
+        row.enabled = self.use_auto_bone_orientation and not is_wuwa
         
         box.prop(self, 'my_bone_length')
         box.prop(self, 'my_leaf_bone')
@@ -2091,51 +2117,62 @@ class Hoyo2VRCImportFbx(Operator, ImportHelper):
 
     def execute(self, context):
         start_time = time.time()
+        
+        # Store the directory path
+        self.imported_directory_path = os.path.dirname(self.filepath)
+        self.imported_file_path = self.filepath
+        print(f"Imported directory path: {self.imported_directory_path}")
+        print(f"Imported file path: {self.imported_file_path}")
+
         # do the job in background
         executable_path = None
         if platform.system() == 'Windows':
             if platform.machine().lower().endswith('amd64') or platform.machine().lower().endswith('x86_64'):
-                executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "x64", "fbx-utility")
+                executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "x64", "fbx-utility")
             elif platform.machine().lower().endswith('arm64') or platform.machine().lower().endswith('aarch64'):
-                executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "arm64", "fbx-utility")
+                executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "arm64", "fbx-utility")
             else:
-                executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "x86", "fbx-utility")
+                executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "x86", "fbx-utility")
         else:
             if platform.system() == 'Linux':
                 glibc_version = os.confstr('CS_GNU_LIBC_VERSION').split(" ")
                 if glibc_version[0] == 'glibc' and glibc_version[1] >= '2.29':
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility")
                 else:
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility2")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility2")
             elif platform.system() == 'Darwin':
                 if platform.mac_ver()[0] >= '10.15':
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility")
                 elif platform.mac_ver()[0] >= '10.13':
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility2")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility2")
                 else:
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility3")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility3")
             # chmod
             if not os.access(executable_path, os.X_OK):
                 os.chmod(executable_path, 0o755)
 
         # delete deprecated output path
-        deprecated_output_path = os.path.join(os.path.dirname(__file__), "data", "untitled-fbx.txt")
+        deprecated_output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "untitled-fbx.txt")
         if os.path.exists(deprecated_output_path):
             os.remove(deprecated_output_path)
 
         # write to inner format
-        output_path = os.path.join(os.path.dirname(__file__), "data", uuid.uuid4().hex + ".txt")
+        output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", uuid.uuid4().hex + ".txt")
 
         if self.files:
             dirname = os.path.dirname(self.filepath)
             for file in self.files:
                 path = os.path.join(dirname, file.name)
+                # Update the current file path being processed
+                self.imported_file_path = path
+                self.imported_directory_path = os.path.dirname(path)
+                print(f"Processing file: {self.imported_file_path}")
                 result = subprocess.run([executable_path, path, output_path, str(self.my_scale), "None", "None", "None", "True" if self.use_only_deform_bones else "False", "True" if self.use_animation else "False", "None", "None", "True" if self.use_reset_mesh_origin else "False", "True" if self.use_reset_mesh_rotation else "False", "True" if self.use_fix_attributes else "False", "True" if self.use_triangulate else "False", "None", "True" if self.use_optimize_for_blender else "False", self.my_edge_smoothing, "None", "None", "None", "None", "None", self.my_fbx_unit, "None", "None", "True" if self.use_fix_mesh_scaling else "False"])
                 if result.returncode != 0:
                     if os.path.exists(output_path):
                         os.remove(output_path)
                     return {'CANCELLED'}
-                result = read_some_data(context, output_path, self.my_leaf_bone, self.my_import_normal, self.my_shade_mode, self.use_auto_smooth, self.my_angle, self.use_auto_bone_orientation, self.my_bone_length, self.my_calculate_roll, self.use_vertex_animation, self.use_edge_crease, self.my_edge_crease_scale, self.my_edge_smoothing, self.use_import_materials, file.name[:file.name.rfind(".")] if self.use_rename_by_filename or self.use_attach_to_selected_armature else None, self.my_rotation_mode, self.use_detect_deform_bone, self.use_fix_bone_poses, self.use_attach_to_selected_armature, self.my_animation_offset, self.use_animation_prefix, self.primary_bone_axis, self.secondary_bone_axis)
+                result = read_some_data(self.imported_directory_path, context, output_path, self.my_leaf_bone, self.my_import_normal, self.my_shade_mode, self.use_auto_smooth, self.my_angle, self.use_auto_bone_orientation, self.my_bone_length, self.my_calculate_roll, self.use_vertex_animation, self.use_edge_crease, self.my_edge_crease_scale, self.my_edge_smoothing, self.use_import_materials, file.name[:file.name.rfind(".")] if self.use_rename_by_filename or self.use_attach_to_selected_armature else None, self.my_rotation_mode, self.use_detect_deform_bone, self.use_fix_bone_poses, self.use_attach_to_selected_armature, self.my_animation_offset, self.use_animation_prefix, self.primary_bone_axis, self.secondary_bone_axis)
                 if result != {'FINISHED'}:
                     if os.path.exists(output_path):
                         os.remove(output_path)
@@ -2151,7 +2188,7 @@ class Hoyo2VRCImportFbx(Operator, ImportHelper):
                     os.remove(output_path)
                 return {'CANCELLED'}
             file = os.path.basename(self.filepath)
-            result = read_some_data(context, output_path, self.my_leaf_bone, self.my_import_normal, self.my_shade_mode, self.use_auto_smooth, self.my_angle, self.use_auto_bone_orientation, self.my_bone_length, self.my_calculate_roll, self.use_vertex_animation, self.use_edge_crease, self.my_edge_crease_scale, self.my_edge_smoothing, self.use_import_materials, file[:file.rfind(".")] if self.use_attach_to_selected_armature else None, self.my_rotation_mode, self.use_detect_deform_bone, self.use_fix_bone_poses, self.use_attach_to_selected_armature, self.my_animation_offset, self.use_animation_prefix, self.primary_bone_axis, self.secondary_bone_axis)
+            result = read_some_data(self.imported_directory_path, context, output_path, self.my_leaf_bone, self.my_import_normal, self.my_shade_mode, self.use_auto_smooth, self.my_angle, self.use_auto_bone_orientation, self.my_bone_length, self.my_calculate_roll, self.use_vertex_animation, self.use_edge_crease, self.my_edge_crease_scale, self.my_edge_smoothing, self.use_import_materials, file[:file.rfind(".")] if self.use_attach_to_selected_armature else None, self.my_rotation_mode, self.use_detect_deform_bone, self.use_fix_bone_poses, self.use_attach_to_selected_armature, self.my_animation_offset, self.use_animation_prefix, self.primary_bone_axis, self.secondary_bone_axis)
             if os.path.exists(output_path):
                 os.remove(output_path)
             print("Finished in: {:.2f} seconds.".format(time.time() - start_time))

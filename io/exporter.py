@@ -1024,7 +1024,7 @@ def make_material_dic(material_dic, texture_dic, ob, texture_map, material_map, 
                                         if ext != '':
                                             # deal with packed image
                                             if node.image.packed_file != None:
-                                                unpacked_texture_filename = os.path.join(os.path.dirname(__file__), "data", os.path.basename(node.image.filepath_from_user()))
+                                                unpacked_texture_filename = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", os.path.basename(node.image.filepath_from_user()))
                                                 # Blender supports UDIM texture since v2.82, UDIM texture filename usually contains "1001."
                                                 partition = unpacked_texture_filename.partition("1001.")
                                                 using_udim_image = (partition[1] == "1001.") and node.image.source == 'TILED'
@@ -2413,36 +2413,36 @@ class Hoyo2VRCExportFbx(Operator, ExportHelper):
         executable_path = None
         if platform.system() == 'Windows':
             if platform.machine().lower().endswith('amd64') or platform.machine().lower().endswith('x86_64'):
-                executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "x64", "fbx-utility")
+                executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "x64", "fbx-utility")
             elif platform.machine().lower().endswith('arm64') or platform.machine().lower().endswith('aarch64'):
-                executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "arm64", "fbx-utility")
+                executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "arm64", "fbx-utility")
             else:
-                executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "x86", "fbx-utility")
+                executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "x86", "fbx-utility")
         else:
             if platform.system() == 'Linux':
                 glibc_version = os.confstr('CS_GNU_LIBC_VERSION').split(" ")
                 if glibc_version[0] == 'glibc' and glibc_version[1] >= '2.29':
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility")
                 else:
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility2")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility2")
             elif platform.system() == 'Darwin':
                 if platform.mac_ver()[0] >= '10.15':
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility")
                 elif platform.mac_ver()[0] >= '10.13':
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility2")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility2")
                 else:
-                    executable_path = os.path.join(os.path.dirname(__file__), "bin", platform.system(), "fbx-utility3")
+                    executable_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bin", platform.system(), "fbx-utility3")
             # chmod
             if not os.access(executable_path, os.X_OK):
                 os.chmod(executable_path, 0o755)
 
         # delete deprecated output path
-        deprecated_output_path = os.path.join(os.path.dirname(__file__), "data", "untitled-fbx.txt")
+        deprecated_output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "untitled-fbx.txt")
         if os.path.exists(deprecated_output_path):
             os.remove(deprecated_output_path)
 
         # write to inner format
-        output_path = os.path.join(os.path.dirname(__file__), "data", uuid.uuid4().hex + ".txt")
+        output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", uuid.uuid4().hex + ".txt")
         # get directory name
         dirname = os.path.dirname(self.filepath)
         # get subdirectory name

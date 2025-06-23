@@ -1,0 +1,16 @@
+{
+    "last_check": "2025-06-23 06:54:53.698993",
+    "backup_date": "",
+    "update_ready": true,
+    "ignore": false,
+    "just_restored": false,
+    "just_updated": false,
+    "version_text": {
+        "link": "https://api.github.com/repos/Hoyotoon/Hoyo2VRC/zipball/refs/tags/5.0.0",
+        "version": [
+            5,
+            0,
+            0
+        ]
+    }
+}
