@@ -903,9 +903,10 @@ def update_notice_box_ui(self, context):
             alert_row.alert = True
             alert_row.operator(
                 "wm.quit_blender",
-                text="Restart blender",
+                text="Close Blender (You'll need to reopen manually)",
                 icon="ERROR")
-            col.label(text="to complete update")
+            col.label(text="Update installed - Restart required!")
+            col.label(text="Note: Blender will close, please reopen manually", icon="INFO")
             return
 
     # If user pressed ignore, don't draw the box.
@@ -1358,16 +1359,16 @@ def register(bl_info):
     updater.private_token = None  # "tokenstring"
 
     # Choose your own username, must match website (not needed for GitLab).
-    updater.user = "hoyotoon"
+    updater.user = "Hoyotoon"
 
     # Choose your own repository, must match git name for GitHUb and Bitbucket,
     # for GitLab use project ID (numbers only).
-    updater.repo = "hoyo2vrc"
+    updater.repo = "Hoyo2VRC"
 
     # updater.addon = # define at top of module, MUST be done first
 
     # Website for manual addon download, optional but recommended to set.
-    updater.website = "https://github.com/hoyotoon/hoyo2vrc"
+    updater.website = "https://github.com/Hoyotoon/Hoyo2VRC"
 
     # Addon subfolder path.
     # "sample/path/to/addon"
@@ -1383,7 +1384,7 @@ def register(bl_info):
 
     # Optional, consider turning off for production or allow as an option
     # This will print out additional debugging info to the console
-    updater.verbose = False  # make False for production default
+    updater.verbose = True  # Enable for debugging update issues
 
     # Optional, customize where the addon updater processing subfolder is,
     # essentially a staging folder used by the updater on its own

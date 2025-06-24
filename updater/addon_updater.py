@@ -107,11 +107,15 @@ class SingletonUpdater:
         self.skip_tag = None
 
         # Get data from the running blender module (addon).
-        self._addon = __package__.lower()
-        self._addon_package = __package__  # Must not change.
+        # Strip .updater from package name if present to get main addon package
+        addon_package = __package__
+        if addon_package and ".updater" in addon_package:
+            addon_package = addon_package.replace(".updater", "")
+        self._addon = addon_package.lower()
+        self._addon_package = addon_package  # Must not change.
+        self._addon_root = os.path.dirname(os.path.dirname(__file__))
         self._updater_path = os.path.join(
-            os.path.dirname(__file__), self._addon + "_updater")
-        self._addon_root = os.path.dirname(__file__)
+            self._addon_root, self._addon + "_updater")
         self._json = dict()
         self._error = None
         self._error_msg = None
@@ -1046,7 +1050,7 @@ class SingletonUpdater:
         for path, dirs, files in os.walk(base):
             # Prune ie skip updater folder.
             dirs[:] = [d for d in dirs
-                       if os.path.join(path, d) not in [self._updater_path]]
+                       if os.path.join(path, d) != self._updater_path and d != "updater"]
             for file in files:
                 for pattern in self.remove_pre_update_patterns:
                     if fnmatch.filter([file], pattern):
@@ -1065,7 +1069,7 @@ class SingletonUpdater:
         for path, dirs, files in os.walk(merger):
             # Verify structure works to prune updater sub folder overwriting.
             dirs[:] = [d for d in dirs
-                       if os.path.join(path, d) not in [self._updater_path]]
+                       if d != "updater"]
             rel_path = os.path.relpath(path, merger)
             dest_path = os.path.join(base, rel_path)
             if not os.path.exists(dest_path):
