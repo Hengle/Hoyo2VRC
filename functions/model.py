@@ -229,7 +229,7 @@ class ModelUtils:
                         continue
                     
                     # Create the new shape key
-                    if not ModelUtils._create_mixed_shape_key(target_obj, new_key, sources):
+                    if not ModelUtils.create_mixed_shape_key(target_obj, new_key, sources):
                         print(f"Failed to create shape key {new_key}")
                         
             return True
@@ -246,7 +246,7 @@ class ModelUtils:
         return key_name in obj.data.shape_keys.key_blocks
     
     @staticmethod
-    def _create_mixed_shape_key(obj: bpy.types.Object, 
+    def create_mixed_shape_key(obj: bpy.types.Object, 
                               key_name: str, 
                               sources: list) -> bool:
         """Create a new shape key by mixing existing ones
@@ -1237,23 +1237,19 @@ class ModelUtils:
             return False
 
     @staticmethod
-    def separate_eye_ui_by_vertex_colors(
-        context: Optional[bpy.types.Context] = None,
-        mesh_name_contains: str = "Face",
-        source_material_contains: str = "Eye_UI",
-        shadow_material_name: str = "EyeShadow_UI", 
-        highlight_material_name: str = "EyeHi_UI",
-        debug_output: bool = True
-    ) -> bool:
-        """Separate eye UI meshes based on vertex colors and assign them to different materials.
+    def convert_vertex_colors_to_uv(context: Optional[bpy.types.Context] = None,
+                                   target_object: str = None,
+                                   color_multiplier: float = 255.0) -> bool:
+        """Convert vertex colors to UV coordinates and create eye-related materials
+        
+        Creates a new UV map populated with vertex color red channel data multiplied by the
+        color_multiplier, and creates EyeHi_UI and EyeShadow_UI materials by duplicating
+        the Eye_UI material. Assigns vertices to appropriate materials based on UV coordinates.
         
         Args:
             context: Optional context. If None, uses bpy.context
-            mesh_name_contains: String that mesh name should contain to be processed
-            source_material_contains: String that source material name should contain
-            shadow_material_name: Name for shadow material (0.05 < red*255 < 0.2)
-            highlight_material_name: Name for highlight material (red*255 ≤ 0.05 or 0.2 ≤ red*255 < 0.5)
-            debug_output: Whether to print debug information
+            target_object: Name of the target object. If None, uses active object
+            color_multiplier: Value to multiply the red channel by (default: 255.0)
             
         Returns:
             bool: True if successful, False if error occurs
@@ -1261,219 +1257,304 @@ class ModelUtils:
         if not context:
             context = bpy.context
             
+        # Get target object
+        if target_object:
+            obj = bpy.data.objects.get(target_object)
+        else:
+            obj = context.active_object
+            
+        if not obj or obj.type != 'MESH':
+            print("No valid mesh object found")
+            return False
+            
         try:
-            print("Starting eye UI separation process...")
-            
-            # Step 1: Find the target mesh
-            face_mesh = None
-            for obj in bpy.data.objects:
-                if obj.type == 'MESH' and mesh_name_contains in obj.name:
-                    face_mesh = obj
-                    break
-                    
-            if not face_mesh:
-                print(f"No mesh found containing '{mesh_name_contains}' in its name")
-                return False
-                
-            print(f"Found target mesh: {face_mesh.name}")
-                
-            # Store original selection and mode
-            original_mode = context.object.mode if context.object else 'OBJECT'
-            original_active = context.view_layer.objects.active
-            original_selection = {o: o.select_get() for o in context.selectable_objects}
-            
-            # Set up our working environment
-            bpy.ops.object.mode_set(mode='OBJECT')
-            bpy.ops.object.select_all(action='DESELECT')
-            face_mesh.select_set(True)
-            context.view_layer.objects.active = face_mesh
-            
-            # Step 2: Find source materials
-            source_materials = []
-            source_material_indices = []
-            
-            for i, mat in enumerate(face_mesh.data.materials):
-                if mat and source_material_contains in mat.name:
-                    source_materials.append(mat)
-                    source_material_indices.append(i)
-                    
-            if not source_materials:
-                print(f"No materials containing '{source_material_contains}' found")
-                return False
-                
-            print(f"Found source materials: {[m.name for m in source_materials]}")
-            
-            # Step 3: Create new materials - FULLY DUPLICATE the source material
-            shadow_mat = None
-            highlight_mat = None
-            source_mat = source_materials[0]  # Use the first Eye_UI material as source
-            
-            # Check if materials already exist and delete them to start fresh
-            for mat in bpy.data.materials:
-                if mat.name == shadow_material_name:
-                    bpy.data.materials.remove(mat)
-                if mat.name == highlight_material_name:
-                    bpy.data.materials.remove(mat)
-                    
-            # Now create the new materials by copying the source
-            shadow_mat = source_mat.copy()
-            shadow_mat.name = shadow_material_name
-            
-            highlight_mat = source_mat.copy()
-            highlight_mat.name = highlight_material_name
-            
-            # Add materials to mesh if needed
-            if shadow_material_name not in face_mesh.data.materials:
-                face_mesh.data.materials.append(shadow_mat)
-            if highlight_material_name not in face_mesh.data.materials:
-                face_mesh.data.materials.append(highlight_mat)
-                
-            # Get material indices
-            shadow_idx = face_mesh.data.materials.find(shadow_material_name)
-            highlight_idx = face_mesh.data.materials.find(highlight_material_name)
-            
-            print(f"Created materials: {shadow_material_name} (index {shadow_idx}), {highlight_material_name} (index {highlight_idx})")
-            
-            # Step 4: Process the mesh in Edit Mode
-            bpy.ops.object.mode_set(mode='EDIT')
-            
-            # Get BMesh for edit operations
-            bm = bmesh.from_edit_mesh(face_mesh.data)
-            
-            # Ensure vertex colors exist
-            if not bm.loops.layers.color:
-                print("No vertex colors found on the mesh")
+            # Replicate the original script exactly
+            mesh = obj.data
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+
+            # Check if there's an active vertex color layer
+            color_layer = bm.loops.layers.color.active
+            if not color_layer:
+                print(f"Object '{obj.name}' has no active vertex color layer.")
                 bm.free()
-                bpy.ops.object.mode_set(mode='OBJECT')
                 return False
-            
-            vcol_layer = bm.loops.layers.color.active
-            
-            # Count statistics
-            count_source = 0
-            count_shadow = 0
-            count_highlight = 0
-            
-            # Initial analysis for debugging
-            if debug_output:
-                # Define the EXACT thresholds as specified by the user
-                threshold_low = 0.05
-                threshold_mid = 0.2
-                threshold_high = 0.5
-                
-                print("\nUsing these EXACT thresholds as specified:")
-                print(f"- Shadow material: {threshold_low} < red < {threshold_mid}")
-                print(f"- Highlight material: red ≤ {threshold_low} OR {threshold_mid} ≤ red < {threshold_high}")
-                print(f"- Original material: red ≥ {threshold_high}")
-                
-                # Collect sample red values
-                red_values = []
-                for face in bm.faces:
-                    if face.material_index in source_material_indices:
-                        for loop in face.loops:
-                            red = loop[vcol_layer][0]  # Red channel (0-1 range)
-                            red_values.append(red)
-                
-                if red_values:
-                    red_values.sort()
-                    num_values = len(red_values)
-                    print("\nRed channel distribution (raw values):")
-                    print(f"Min value: {red_values[0]:.6f}")
-                    print(f"10% value: {red_values[int(num_values*0.1)]:.6f}")
-                    print(f"25% value: {red_values[int(num_values*0.25)]:.6f}")
-                    print(f"Median value: {red_values[int(num_values*0.5)]:.6f}")
-                    print(f"75% value: {red_values[int(num_values*0.75)]:.6f}")
-                    print(f"90% value: {red_values[int(num_values*0.9)]:.6f}")
-                    print(f"Max value: {red_values[-1]:.6f}")
-                    print("")
-            
-            # Step 5: Categorize face material assignments based on vertex colors
-            print("\nProcessing faces based on vertex colors...")
-            shadow_faces = []
-            highlight_faces = []
-            original_faces = []
-            
-            for face in bm.faces:
-                # Only process faces with the source material
-                if face.material_index not in source_material_indices:
-                    continue
-                
-                # Track what category this face falls into based on its vertices
-                face_is_shadow = False
-                face_is_highlight = False
-                face_is_original = False
-                
-                # Check each vertex color
-                for loop in face.loops:
-                    # Get the RED channel of the vertex color (0-1 range)
-                    red = loop[vcol_layer][0]
-                    
-                    # Debug output for some vertices
-                    if debug_output and face.index % 500 == 0:
-                        print(f"Face {face.index}, vertex red value: {red:.6f}")
-                    
-                    # DIRECTLY apply the user-specified thresholds:
-                    # - If red >= 0.5: keep original material
-                    # - If 0.05 < red < 0.2: assign to EyeShadow_UI material 
-                    # - If red <= 0.05 OR 0.2 <= red < 0.5: assign to EyeHi_UI material
-                    
-                    if red >= 0.5:
-                        face_is_original = True
-                    elif 0.05 < red < 0.2:
-                        face_is_shadow = True
-                    elif red <= 0.05 or (0.2 <= red < 0.5):
-                        face_is_highlight = True
-                
-                # Determine the final category for this face
-                # Priority: Shadow > Highlight > Original
-                if face_is_shadow:
-                    shadow_faces.append(face)
-                elif face_is_highlight:
-                    highlight_faces.append(face)
+
+            # Create new materials if they don't exist and assign them to the object
+            material_prefix = ""
+            eye_ui_material = None
+            for mat in obj.data.materials:
+                if "Eye_UI" in mat.name:
+                    material_prefix = mat.name.split("Eye_UI")[0]
+                    eye_ui_material = mat
+                    break  # Stop after finding the first matching material
+
+            eye_hi_material_name = material_prefix + "EyeHi_UI"
+            eye_shadow_material_name = material_prefix + "EyeShadow_UI"
+
+            if eye_ui_material:
+                if eye_hi_material_name not in bpy.data.materials:
+                    material_eye_hi = eye_ui_material.copy()  # Duplicate
+                    material_eye_hi.name = eye_hi_material_name #rename
                 else:
-                    original_faces.append(face)
+                    material_eye_hi = bpy.data.materials[eye_hi_material_name]
+                if eye_hi_material_name not in obj.data.materials:
+                    obj.data.materials.append(material_eye_hi)
+
+                if eye_shadow_material_name not in bpy.data.materials:
+                    material_eye_shadow = eye_ui_material.copy()  # Duplicate
+                    material_eye_shadow.name = eye_shadow_material_name #rename
+                else:
+                    material_eye_shadow = bpy.data.materials[eye_shadow_material_name]
+                if eye_shadow_material_name not in obj.data.materials:
+                    obj.data.materials.append(material_eye_shadow)
+            else:
+                print("Error: 'Eye_UI' material not found.  Cannot duplicate.")
+                bm.free()
+                return False
+
+            # Create a new UV layer
+            uv_layer = bm.loops.layers.uv.new()
+            new_uv_layer_index = len(mesh.uv_layers)  # Get the index before applying bmesh changes
+
+            # Initialize all UV coordinates to (0, 0)
+            for face in bm.faces:
+                for loop in face.loops:
+                    loop[uv_layer].uv = (0.0, 0.0)  # Initialize to (0, 0)
+
+            # Iterate through the faces and loops to set the UV coordinates
+            eye_ui_vertex_count = 0  # Initialize counter
+            for face in bm.faces:
+                # Check if the face has a material name containing "Eye_UI", "EyeHi_UI", or "EyeShadow_UI"
+                if face.material_index < len(mesh.materials) and mesh.materials[face.material_index] and any(
+                    eye_material in mesh.materials[face.material_index].name
+                    for eye_material in ["Eye_UI", "EyeHi_UI", "EyeShadow_UI"]
+                ):
+                    for loop in face.loops:
+                        color = loop[color_layer]
+                        u = color[0] * color_multiplier  # Red channel multiplied
+                        v = 0.5
+                        loop[uv_layer].uv = (u, v)  # Set the final UV Coord
+                        eye_ui_vertex_count += 1  # Increment counter
+
+            # Update the mesh with the changes
+            bm.to_mesh(mesh)
+
+            # Now we can access the UV layer and check the coordinates.
+            mesh = obj.data
             
-            # Step 6: Apply material assignments
-            # Assign shadow material
-            print(f"Found {len(shadow_faces)} faces for shadow material")
-            for face in shadow_faces:
-                face.material_index = shadow_idx
-                count_shadow += 1
+            # Get the newly created UV layer.
+            new_uv_layer = mesh.uv_layers[new_uv_layer_index]
+
+            # Create a set to store unique vertices that need to be assigned to EyeHi_UI
+            vertices_to_assign_eye_hi = set()
+            vertices_to_assign_eye_shadow = set()
+
+            # Iterate through the mesh data to find vertices with the target UV coordinates.
+            for face in mesh.polygons:
+                for loop_index in face.loop_indices:
+                    uv_coords = new_uv_layer.data[loop_index].uv
+                    # Check for each UV coordinate individually
+                    if (uv_coords[0] == 0 and uv_coords[1] == 0.5) or \
+                       (2.5 < uv_coords[0] < 3.5 and uv_coords[1] == 0.5) or \
+                       (uv_coords[0] == 4.0 and uv_coords[1] == 0.5):
+                        # Get the vertex index from the loop
+                        vert_index = mesh.loops[loop_index].vertex_index
+                        vertices_to_assign_eye_hi.add(vert_index)
+                    elif (0.5 < uv_coords[0] < 2.5 and uv_coords[1] == 0.5):
+                        # Get the vertex index from the loop
+                        vert_index = mesh.loops[loop_index].vertex_index
+                        vertices_to_assign_eye_shadow.add(vert_index)
+
+            # Assign the vertices to the EyeHi_UI material using BMesh.
+            if vertices_to_assign_eye_hi:
                 
-            # Assign highlight material
-            print(f"Found {len(highlight_faces)} faces for highlight material")
-            for face in highlight_faces:
-                face.material_index = highlight_idx
-                count_highlight += 1
+                #get the material index.
+                material_eye_hi_index = obj.data.materials.find(eye_hi_material_name)
                 
-            # Count remaining source faces
-            count_source = len(original_faces)
+                if material_eye_hi_index != -1:
+                    
+                    # Assign the material to the selected faces.
+                    for face in bm.faces:
+                        for loop in face.loops:
+                            if loop.vert.index in vertices_to_assign_eye_hi:
+                                face.material_index = material_eye_hi_index                                          
+                    
+                    # Update the mesh with the changes from the bmesh.
+                    bm.to_mesh(mesh)
+                    print(f"Vertices with UV coordinates (0, 0.5), (3, 0.5), and (4, 0.5) assigned to material '{eye_hi_material_name}'.")
+                else:
+                    print(f"Error: Material '{eye_hi_material_name}' not found on object '{obj.name}'.")
+            else:
+                print(f"No vertices found with UV coordinates (0, 0.5), (3, 0.5), or (4, 0.5).")
+
+            # Assign the vertices to the EyeShadow_UI material using BMesh.
+            if vertices_to_assign_eye_shadow:
                 
-            # Update the mesh
-            bmesh.update_edit_mesh(face_mesh.data)
+                #get the material index.
+                material_eye_sdw_index = obj.data.materials.find(eye_shadow_material_name)
+                
+                if material_eye_sdw_index != -1:
+                    
+                    # Assign the material to the selected faces.
+                    for face in bm.faces:
+                        for loop in face.loops:
+                            if loop.vert.index in vertices_to_assign_eye_shadow:
+                                face.material_index = material_eye_sdw_index                                          
+                    
+                    # Update the mesh with the changes from the bmesh.
+                    bm.to_mesh(mesh)
+                    print(f"Vertices with UV coordinates (0.5 < x < 2.5, y = 0.5) assigned to material '{eye_shadow_material_name}'.")
+                else:
+                    print(f"Error: Material '{eye_shadow_material_name}' not found on object '{obj.name}'.")
+            else:
+                print(f"No vertices found with UV coordinates (0.5 < x < 2.5, y = 0.5).")
+            print(f"Number of vertices found for EyeShadow_UI: {len(vertices_to_assign_eye_shadow)}") # Debug line
+
             bm.free()
-            
-            # Return to Object mode
-            bpy.ops.object.mode_set(mode='OBJECT')
-            
-            print("\nResults:")
-            print(f"Faces assigned to {shadow_material_name}: {count_shadow}")
-            print(f"Faces assigned to {highlight_material_name}: {count_highlight}")
-            print(f"Faces remaining with source material: {count_source}")
-            
-            # Step 7: Restore original context
-            for o, selected in original_selection.items():
-                if o is not None and o.name in bpy.data.objects:
-                    o.select_set(selected)
-            if original_active and original_active.name in bpy.data.objects:
-                context.view_layer.objects.active = original_active
-            if original_mode != 'OBJECT':
-                bpy.ops.object.mode_set(mode=original_mode)
+            if len(mesh.uv_layers) > new_uv_layer_index:
+                uv_layer_name = mesh.uv_layers[new_uv_layer_index].name
+                print(f"Processing completed with temporary UV map on '{obj.name}'.")
+                print(
+                    f"Number of vertices processed for materials containing 'Eye_UI', 'EyeHi_UI', or 'EyeShadow_UI': {eye_ui_vertex_count}"
+                )  # Print the count
+                
+                # Remove the temporary UV layer
+                mesh.uv_layers.remove(mesh.uv_layers[new_uv_layer_index])
+                print(f"Temporary UV layer removed from '{obj.name}'.")
+            else:
+                print(f"Error: Could not find the temporary UV layer on '{obj.name}'.")
                 
             return True
             
         except Exception as e:
-            print(f"Error separating eye UI by vertex colors: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            print(f"Error converting vertex colors to UV: {str(e)}")
+            if 'bm' in locals():
+                bm.free()
             return False
+
+    @staticmethod
+    def assign_modified_material(context: Optional[bpy.types.Context] = None,
+                                search_keywords = None,
+                                new_suffix: str = "Bangs") -> bool:
+        """Assign modified materials to meshes containing specific keywords in their names
+        
+        For meshes containing any of the search keywords in their name:
+        - Duplicates the first material
+        - Renames the duplicated material by taking the original name,
+          removing characters from the end until a '_' is found, and appending the new suffix
+        - Assigns the renamed material to all vertices of the mesh
+        
+        Args:
+            context: Optional context. If None, uses bpy.context
+            search_keywords: Keyword(s) to search for in mesh names (string or list of strings, case-insensitive)
+            new_suffix: Suffix to append to the material name (default: "Bangs")
+            
+        Returns:
+            bool: True if successful, False if error occurs
+        """
+        if not context:
+            context = bpy.context
+            
+        if not search_keywords:
+            print("Error: search_keywords must be provided")
+            return False
+            
+        # Normalize search_keywords to list
+        if isinstance(search_keywords, str):
+            search_keywords = [search_keywords]
+        elif not isinstance(search_keywords, list):
+            print("Error: search_keywords must be a string or list of strings")
+            return False
+            
+        try:
+            # Store current mode and active object
+            prev_active = context.active_object
+            prev_mode = SceneUtils.ensure_mode(context, 'OBJECT')
+            
+            processed_objects = []
+            
+            # Find meshes containing any of the search keywords
+            for obj in bpy.data.objects:
+                if obj.type != 'MESH':
+                    continue
+                    
+                # Check if object name contains any search keyword (case-insensitive)
+                obj_name_lower = obj.name.lower()
+                has_keyword = any(keyword.lower() in obj_name_lower for keyword in search_keywords)
+                
+                if not has_keyword:
+                    continue
+                    
+                # Check if mesh has materials
+                if not obj.data.materials:
+                    print(f"Mesh '{obj.name}' has no material to duplicate")
+                    continue
+                    
+                # Get first material
+                original_material = obj.data.materials[0]
+                original_name = original_material.name
+                
+                # Generate new material name
+                last_underscore_index = original_name.rfind('_')
+                if last_underscore_index != -1:
+                    new_material_name = original_name[:last_underscore_index + 1] + new_suffix
+                else:
+                    new_material_name = original_name + "_" + new_suffix
+                
+                # Check if material with this name already exists
+                if new_material_name in bpy.data.materials:
+                    new_material = bpy.data.materials[new_material_name]
+                    print(f"Using existing material '{new_material_name}' for '{obj.name}'")
+                else:
+                    # Duplicate the original material
+                    new_material = original_material.copy()
+                    new_material.name = new_material_name
+                    print(f"Created new material '{new_material_name}' from '{original_name}'")
+                
+                # Set object as active
+                context.view_layer.objects.active = obj
+                
+                # Clear existing materials and assign new one
+                obj.data.materials.clear()
+                obj.data.materials.append(new_material)
+                
+                # Enter edit mode to select all vertices
+                SceneUtils.ensure_mode(context, 'EDIT')
+                bpy.ops.mesh.select_all(action='SELECT')
+                
+                # Assign material to all faces (done automatically when only one material exists)
+                # All faces will use material index 0 by default
+                
+                # Return to object mode
+                SceneUtils.ensure_mode(context, 'OBJECT')
+                
+                processed_objects.append(obj.name)
+                print(f"Material '{original_name}' duplicated and renamed to '{new_material.name}', assigned to '{obj.name}'")
+            
+            # Restore previous state
+            if prev_active:
+                context.view_layer.objects.active = prev_active
+            SceneUtils.restore_mode(context, prev_mode)
+            
+            # Report results
+            if processed_objects:
+                print(f"Successfully processed {len(processed_objects)} objects: {', '.join(processed_objects)}")
+            else:
+                search_keywords_str = "', '".join(search_keywords)
+                print(f"No mesh objects found containing keywords: '{search_keywords_str}'")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error assigning modified materials: {str(e)}")
+            # Restore state on error
+            if 'prev_active' in locals() and prev_active:
+                context.view_layer.objects.active = prev_active
+            if 'prev_mode' in locals():
+                SceneUtils.restore_mode(context, prev_mode)
+            return False
+    
+
+
+

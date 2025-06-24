@@ -1028,3 +1028,415 @@ class ArmatureUtils:
             traceback.print_exc()
             return False
     
+    @staticmethod
+    def move_armature_to_ground(context: Optional[bpy.types.Context] = None) -> bool:
+        """Move armature so that the lowest non-weapon mesh vertex is at Z=0
+        
+        Args:
+            context: Optional context. If None, uses bpy.context
+            
+        Returns:
+            bool: True if successful, False if error occurs
+        """
+        if not context:
+            context = bpy.context
+            
+        try:
+            lowest_z = float('inf')
+            target_meshes = []
+            
+            # Find the lowest Z vertex among non-weapon meshes
+            for obj in context.scene.objects:
+                if obj.type == 'MESH' and "weapon" not in obj.name.lower() and "body" in obj.name.lower():
+                    target_meshes.append(obj)
+                    world_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
+                    min_z_obj = min(coord.z for coord in world_coords)
+                    lowest_z = min(lowest_z, min_z_obj)
+            
+            if not target_meshes:
+                print("No non-weapon meshes found in the scene.")
+                return False
+                
+            if lowest_z >= 0:
+                print("All non-weapon meshes are already at or above Z=0.")
+                return True
+            
+            # Find armature to move
+            armature = context.active_object
+            if not armature or armature.type != 'ARMATURE':
+                # Try to find any armature in the scene
+                armature = next((obj for obj in context.scene.objects if obj.type == 'ARMATURE'), None)
+                if not armature:
+                    print("No armature found in the scene.")
+                    return False
+            
+            # Move the armature
+            translation = mathutils.Vector((0, 0, -lowest_z))
+            armature.location += translation
+            print(f"Moved armature '{armature.name}' by {translation} to bring the lowest non-weapon vertex to Z=0.")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error moving armature to ground: {str(e)}")
+            return False
+    
+    @staticmethod
+    def separate_bangs_by_armature(context: Optional[bpy.types.Context] = None,
+                                  hair_obj = None,
+                                  armature_obj = None, 
+                                  bone_keywords: list = None,
+                                  y_boundary: float = 0.0) -> bool:
+        """Separate bangs by creating new mesh object and duplicating materials
+        
+        Args:
+            context: Optional context. If None, uses bpy.context
+            hair_obj: Hair mesh object or name string to separate bangs from
+            armature_obj: Armature object or name string containing the bones
+            bone_keywords: List of bone keywords to match for bangs
+            y_boundary: World Y coordinate boundary - vertices beyond this are excluded (default 0.0 = X-axis line)
+            
+        Returns:
+            bool: True if successful, False if error occurs
+        """
+        if not context:
+            context = bpy.context
+            
+        if not bone_keywords:
+            bone_keywords = ["HairL", "HairM", "HairR", "HairTop", "HairFM", "HairU"]
+            
+        # Convert string names to objects if needed
+        if isinstance(hair_obj, str):
+            hair_obj = bpy.data.objects.get(hair_obj)
+        if isinstance(armature_obj, str):
+            armature_obj = bpy.data.objects.get(armature_obj)
+            
+        if not hair_obj or not armature_obj:
+            print("❌ Hair or Armature object not found.")
+            return False
+
+        def get_matching_bones(armature, substrings):
+            matched = set()
+
+            def match_name(name):
+                lname = name.lower()
+                return any(substr.lower() in lname for substr in substrings)
+
+            for bone in armature.data.bones:
+                if match_name(bone.name):
+                    matched.add(bone.name)
+                    def add_children_recursive(b):
+                        for child in b.children:
+                            matched.add(child.name)
+                            add_children_recursive(child)
+                    add_children_recursive(bone)
+
+            return matched
+
+        def get_vert_weights(obj):
+            weights = {v.index: {} for v in obj.data.vertices}
+            for vg in obj.vertex_groups:
+                for v in obj.data.vertices:
+                    for g in v.groups:
+                        if g.group == vg.index:
+                            weights[v.index][vg.name] = g.weight
+            return weights
+
+
+
+        matched_bones = get_matching_bones(armature_obj, bone_keywords)
+        print(f"✅ Using all matched bones for bangs: {matched_bones}")
+
+        # Store original selection and active object
+        original_selection = [obj for obj in context.selected_objects]
+        original_active = context.active_object
+
+        # Clear selection and set only hair object as active and selected
+        bpy.ops.object.select_all(action='DESELECT')
+        hair_obj.select_set(True)
+        context.view_layer.objects.active = hair_obj
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        weights = get_vert_weights(hair_obj)
+
+        selected_verts = set()
+        for v in hair_obj.data.vertices:
+            vw = weights.get(v.index, {})
+            if any(bone in vw for bone in matched_bones):
+                # Check vertex position in world space (Y-axis is forward/backward)
+                world_pos = hair_obj.matrix_world @ v.co
+                if world_pos.y <= y_boundary:  # Only vertices not extending beyond boundary
+                    selected_verts.add(v.index)
+                # else:
+                #     print(f"Filtered out vertex {v.index} at Y position {world_pos.y:.3f}m (beyond boundary)")
+
+        if not selected_verts:
+            print("⚠️ No vertices matched the specified bone weights.")
+            return False
+
+        # Use selected vertices directly without expansion
+        final_verts = selected_verts
+
+        # Store original hair material for duplication
+        original_hair_material = None
+        if hair_obj.data.materials:
+            original_hair_material = hair_obj.data.materials[0]
+        else:
+            print("❌ Hair object has no materials to duplicate.")
+            return False
+
+        # Create bangs material by duplicating original hair material
+        bangs_material = original_hair_material.copy()
+        bangs_material.name = original_hair_material.name.replace("Hair", "Bangs")
+        
+        # Add bangs material to the hair object
+        hair_obj.data.materials.append(bangs_material)
+        bangs_material_index = len(hair_obj.data.materials) - 1
+
+        # Make sure we're working with the hair object only
+        bpy.ops.object.select_all(action='DESELECT')
+        hair_obj.select_set(True)
+        context.view_layer.objects.active = hair_obj
+
+        # Switch to edit mode to assign materials to bang faces
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        # Switch to edit mode and work with faces from the start
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.mesh.select_mode(type='FACE')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Select faces that have bang vertices weighted to our bones
+        for face in hair_obj.data.polygons:
+            # Check if any vertices of this face are bang vertices
+            any_vert_is_bang = any(v_idx in final_verts for v_idx in face.vertices)
+            
+            if any_vert_is_bang:
+                face.select = True
+        
+        # Now go to edit mode and select all linked faces plus nearby disconnected geometry
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_linked()
+        
+        # Also select nearby faces that might be part of the same hair strand but disconnected
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Get all currently selected faces as reference points
+        selected_face_centers = []
+        for face in hair_obj.data.polygons:
+            if face.select:
+                # Calculate face center in world space
+                face_center = sum((hair_obj.matrix_world @ hair_obj.data.vertices[v_idx].co for v_idx in face.vertices), mathutils.Vector()) / len(face.vertices)
+                selected_face_centers.append(face_center)
+        
+        # Select additional faces that are close to selected faces (likely same hair strand)
+        proximity_threshold = 0.02  # 5cm threshold for considering faces as part of same strand
+        for face in hair_obj.data.polygons:
+            if not face.select:  # Only check unselected faces
+                face_center = sum((hair_obj.matrix_world @ hair_obj.data.vertices[v_idx].co for v_idx in face.vertices), mathutils.Vector()) / len(face.vertices)
+                
+                # Check if this face is close to any selected face
+                for selected_center in selected_face_centers:
+                    distance = (face_center - selected_center).length
+                    if distance <= proximity_threshold:
+                        face.select = True
+                        break  # Don't need to check other selected faces
+        
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        # Apply Y boundary filter after linked selection to prevent over-extension
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Deselect faces that extend too far beyond the Y boundary
+        for face in hair_obj.data.polygons:
+            if face.select:
+                # Check if any vertex of this face extends too far beyond the boundary
+                any_vert_too_far = any(
+                    (hair_obj.matrix_world @ hair_obj.data.vertices[v_idx].co).y > (y_boundary + 0.05)  # Allow 30cm buffer
+                    for v_idx in face.vertices
+                )
+                
+                if any_vert_too_far:
+                    face.select = False
+        
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        # Assign bangs material to selected faces
+        hair_obj.active_material_index = bangs_material_index
+        bpy.ops.object.material_slot_assign()
+        
+        # Deselect all and return to object mode
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        print(f"✅ Created bangs material '{bangs_material.name}' and assigned to bang faces.")
+        
+        # Restore original selection and active object
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in original_selection:
+            if obj and obj.name in bpy.data.objects:
+                obj.select_set(True)
+        if original_active and original_active.name in bpy.data.objects:
+            context.view_layer.objects.active = original_active
+        
+        return True
+    
+    @staticmethod
+    def adjust_bone_tails_to_connect(context: Optional[bpy.types.Context] = None,
+                                   exclude_substrings: list = None) -> bool:
+        """Automatically finds bone chains and adjusts the tail of each parent bone
+        to meet the head of its child bone, keeping child heads fixed.
+        The script stops processing a chain if it skips a numerical suffix.
+        It avoids bones whose names contain any string from a specified exclusion list (case-insensitive).
+        
+        Args:
+            context: Optional context. If None, uses bpy.context
+            exclude_substrings: List of substrings to exclude from processing (case-insensitive).
+                              If None, uses default exclusion list.
+            
+        Returns:
+            bool: True if successful, False if error occurs
+        """
+        if not context:
+            context = bpy.context
+            
+        if not exclude_substrings:
+            exclude_substrings = ["pelvis", "waist", "spine", "arm", "leg", "chest", 
+                                "neck", "head", "knee", "calf", "elbow", "skirt", 
+                                "thigh", "twist"]
+        
+        # Convert to lowercase for case-insensitive comparison
+        exclude_substrings = {s.lower() for s in exclude_substrings}
+            
+        armature = context.active_object
+        if not armature or armature.type != 'ARMATURE':
+            print("No armature found")
+            return False
+            
+        try:
+            import re
+            
+            # Switch to edit mode
+            bpy.ops.object.mode_set(mode='EDIT')
+            
+            edit_bones = armature.data.edit_bones
+            bone_chains = {}
+            
+            name_pattern = re.compile(r"^(.*?)(\d+)$")
+            
+            # Find bone chains based on naming pattern
+            for bone in edit_bones:
+                bone_name_lower = bone.name.lower()
+                
+                # Check exclusion list (case-insensitive)
+                should_exclude = False
+                for forbidden_substring in exclude_substrings:
+                    if forbidden_substring in bone_name_lower:
+                        print(f"  Skipping bone '{bone.name}': Contains '{forbidden_substring}' from the exclusion list.")
+                        should_exclude = True
+                        break
+                
+                if should_exclude:
+                    continue
+                
+                # Match naming pattern (prefix + number)
+                match = name_pattern.match(bone.name)
+                if match:
+                    prefix = match.group(1)
+                    try:
+                        suffix_num = int(match.group(2))
+                        if prefix not in bone_chains:
+                            bone_chains[prefix] = {}
+                        bone_chains[prefix][suffix_num] = bone
+                    except ValueError:
+                        continue
+            
+            if not bone_chains:
+                print(f"No potential bone chains (names ending with numbers) found in armature '{armature.name}' after exclusions.")
+                bpy.ops.object.mode_set(mode='OBJECT')
+                return True
+            
+            # Process each bone chain
+            sorted_prefixes = sorted(bone_chains.keys())
+            
+            for prefix in sorted_prefixes:
+                bones_in_chain = bone_chains[prefix]
+                
+                if len(bones_in_chain) < 2:
+                    print(f"\nSkipping chain with prefix '{prefix}': Needs at least 2 bones.")
+                    continue
+                
+                print(f"\n--- Starting to process bone chain with prefix: '{prefix}' (Adjusting only tails) ---")
+                sorted_bone_keys = sorted(bones_in_chain.keys())
+                
+                # Check for continuity in the chain
+                expected_next_key = sorted_bone_keys[0]
+                is_continuous = True
+                for key in sorted_bone_keys:
+                    if key != expected_next_key:
+                        print(f"  Gap detected in chain '{prefix}': Expected '{prefix}{expected_next_key}', but found '{prefix}{key}'. Stopping processing this chain.")
+                        is_continuous = False
+                        break
+                    expected_next_key += 1
+                
+                if not is_continuous:
+                    print(f"--- Aborted processing bone chain with prefix: '{prefix}' due to gap. ---")
+                    continue
+                
+                # Warn if chain doesn't start with 0
+                if sorted_bone_keys[0] != 0:
+                    print(f"  Warning: Chain '{prefix}' does not start with index 0. It starts with '{prefix}{sorted_bone_keys[0]}'.")
+                    print("  Connecting bones sequentially based on found indices.")
+                
+                # Process each bone in the chain
+                for i in range(len(sorted_bone_keys) - 1):
+                    current_bone_index = sorted_bone_keys[i]
+                    next_bone_index = sorted_bone_keys[i + 1]
+                    
+                    current_bone = bones_in_chain[current_bone_index]
+                    next_bone = bones_in_chain[next_bone_index]
+                    
+                    # Check if current_bone's tail is already at next_bone's head
+                    is_already_correct = False
+                    if (current_bone.tail - next_bone.head).length < 0.0001:
+                        if next_bone.parent == current_bone and next_bone.use_connect:
+                            is_already_correct = True
+                    
+                    if is_already_correct:
+                        print(f"  Skipping '{current_bone.name}' tail: Already correctly positioned and '{next_bone.name}' connected.")
+                        continue
+                    
+                    # Move the tail of the current_bone to the head of the next_bone
+                    current_bone.tail = next_bone.head
+                    print(f"  Moved tail of '{current_bone.name}' to head of '{next_bone.name}'.")
+                    
+                    # Set up parenting
+                    if next_bone.parent != current_bone:
+                        next_bone.parent = current_bone
+                        print(f"  Parented '{next_bone.name}' to '{current_bone.name}'.")
+                    
+                    # Set connection
+                    if not next_bone.use_connect:
+                        next_bone.use_connect = True
+                        print(f"  Set '{next_bone.name}' to be connected.")
+                
+                print(f"--- Finished processing bone chain with prefix: '{prefix}' ---")
+            
+            # Return to object mode
+            bpy.ops.object.mode_set(mode='OBJECT')
+            
+            print("\nAutomated bone chain processing complete for all detected continuous chains.")
+            return True
+            
+        except Exception as e:
+            print(f"Error adjusting bone tails: {str(e)}")
+            # Ensure we return to object mode even if there's an error
+            try:
+                bpy.ops.object.mode_set(mode='OBJECT')
+            except:
+                pass
+            return False
+    

@@ -2,6 +2,8 @@ import bpy
 from typing import Optional, List
 from .game_detection import GameDetector
 import os
+import json
+import shutil
 
 class SceneUtils:
     """Utility class for scene operations"""
@@ -401,3 +403,208 @@ class SceneUtils:
             import traceback
             traceback.print_exc()
             return False
+
+    @staticmethod
+    def duplicate_material_json(context: Optional[bpy.types.Context] = None,
+                               imported_directory: Optional[str] = None,
+                               search_keywords = None,
+                               new_keywords = None,
+                               exclude_keywords: List[str] = None) -> List[str]:
+        """Find JSON files containing keywords and duplicate them with new keywords
+        
+        Args:
+            context: Optional context. If None, uses bpy.context
+            imported_directory: Directory path where the model was imported from
+            search_keywords: Keyword(s) to search for in JSON filenames (string or list of strings, case-insensitive)
+            new_keywords: New keyword(s) to replace the first found search keyword in duplicated files (string or list of strings)
+            exclude_keywords: List of keywords to exclude from matches (case-insensitive)
+            
+        Returns:
+            List[str]: List of duplicated file paths that were created
+        """
+        if not context:
+            context = bpy.context
+            
+        if not search_keywords or not new_keywords:
+            print("Error: Both search_keywords and new_keywords must be provided")
+            return []
+            
+        # Normalize search_keywords to list
+        if isinstance(search_keywords, str):
+            search_keywords = [search_keywords]
+        elif not isinstance(search_keywords, list):
+            print("Error: search_keywords must be a string or list of strings")
+            return []
+            
+        # Normalize new_keywords to list
+        if isinstance(new_keywords, str):
+            new_keywords = [new_keywords]
+        elif not isinstance(new_keywords, list):
+            print("Error: new_keywords must be a string or list of strings")
+            return []
+            
+        # Normalize exclude_keywords to list
+        if exclude_keywords is None:
+            exclude_keywords = []
+        elif isinstance(exclude_keywords, str):
+            exclude_keywords = [exclude_keywords]
+        elif not isinstance(exclude_keywords, list):
+            print("Error: exclude_keywords must be a string or list of strings")
+            return []
+            
+        try:
+            # If no import directory provided, try to get it from armature or mesh
+            if not imported_directory:
+                print("No import directory provided, searching in objects...")
+                for obj in context.scene.objects:
+                    if (obj.type in {'ARMATURE', 'MESH'}) and "import_dir" in obj:
+                        imported_directory = obj["import_dir"]
+                        print(f"Found import directory from {obj.type.lower()}: {imported_directory}")
+                        break
+            
+            if not imported_directory:
+                print("Error: Could not find import directory")
+                return []
+                
+            print(f"Using import directory: {imported_directory}")
+            materials_dir = os.path.join(imported_directory, "Materials")
+            
+            if not os.path.exists(materials_dir):
+                print(f"Materials directory not found: {materials_dir}")
+                return []
+                
+            print(f"Looking for JSON files in: {materials_dir}")
+            
+            # Find all JSON files in the Materials directory
+            json_files = []
+            for file in os.listdir(materials_dir):
+                if file.lower().endswith('.json'):
+                    json_files.append(file)
+                    
+            print(f"Found {len(json_files)} JSON files")
+            
+            # Filter files containing any search keyword but none of the exclude keywords (case-insensitive)
+            # Also exclude files that already contain any of the new keywords to prevent nesting
+            all_exclude_keywords = exclude_keywords.copy()
+            all_exclude_keywords.extend(new_keywords)  # Add new keywords to exclusion list
+            
+            matching_files = []
+            for json_file in json_files:
+                json_file_lower = json_file.lower()
+                
+                # Check if file contains any of the search keywords
+                has_search_keyword = any(keyword.lower() in json_file_lower for keyword in search_keywords)
+                
+                # Check if file contains any of the exclude keywords OR new keywords
+                has_exclude_keyword = any(exclude.lower() in json_file_lower for exclude in all_exclude_keywords)
+                
+                if has_search_keyword and not has_exclude_keyword:
+                    matching_files.append(json_file)
+                    print(f"Found matching file: {json_file}")
+                else:
+                    if has_search_keyword and has_exclude_keyword:
+                        # Find which exclude keyword matched
+                        matched_excludes = [exclude for exclude in all_exclude_keywords if exclude.lower() in json_file_lower]
+                        print(f"Skipped file {json_file}: contains excluded keyword(s) {matched_excludes}")
+            
+            if not matching_files:
+                search_keywords_str = "', '".join(search_keywords)
+                exclude_str = f" (excluding: '{', '.join(all_exclude_keywords)}')" if all_exclude_keywords else ""
+                print(f"No JSON files found containing keywords '{search_keywords_str}'{exclude_str}")
+                return []
+                
+            # Pre-validate which duplications are needed
+            duplications_needed = []
+            existing_files = []
+            
+            for json_file in matching_files:
+                try:
+                    # Find which search keyword is present in the filename
+                    found_keyword = None
+                    json_file_lower = json_file.lower()
+                    
+                    for keyword in search_keywords:
+                        if keyword.lower() in json_file_lower:
+                            found_keyword = keyword
+                            break
+                    
+                    if not found_keyword:
+                        print(f"Warning: No search keyword found in {json_file}")
+                        continue
+                    
+                    # Check each new keyword to see if duplication is needed
+                    for new_keyword in new_keywords:
+                        # Create new filename by replacing the found keyword with new keyword
+                        new_filename = json_file.replace(found_keyword, new_keyword)
+                        
+                        # Handle case-insensitive replacement if direct replacement didn't work
+                        if new_filename == json_file:
+                            # Find the keyword position (case-insensitive)
+                            lower_filename = json_file.lower()
+                            lower_keyword = found_keyword.lower()
+                            start_pos = lower_filename.find(lower_keyword)
+                            
+                            if start_pos != -1:
+                                # Replace while preserving original case structure
+                                new_filename = (json_file[:start_pos] + 
+                                              new_keyword + 
+                                              json_file[start_pos + len(found_keyword):])
+                        
+                        dest_path = os.path.join(materials_dir, new_filename)
+                        
+                        # Check if destination file already exists
+                        if os.path.exists(dest_path):
+                            existing_files.append(new_filename)
+                            print(f"Skipped: {new_filename} already exists")
+                        else:
+                            duplications_needed.append({
+                                'source_file': json_file,
+                                'source_path': os.path.join(materials_dir, json_file),
+                                'dest_filename': new_filename,
+                                'dest_path': dest_path,
+                                'found_keyword': found_keyword,
+                                'new_keyword': new_keyword
+                            })
+                        
+                except Exception as validation_error:
+                    print(f"Error validating {json_file}: {str(validation_error)}")
+                    continue
+            
+            # Report what will be processed
+            if existing_files:
+                print(f"Found {len(existing_files)} files that already exist and will be skipped")
+            
+            if not duplications_needed:
+                print("No duplications needed - all target files already exist")
+                return []
+                
+            print(f"Will create {len(duplications_needed)} new duplicate files")
+            
+            # Perform the actual duplications
+            duplicated_files = []
+            for duplication in duplications_needed:
+                try:
+                    # Copy the file
+                    shutil.copy2(duplication['source_path'], duplication['dest_path'])
+                    duplicated_files.append(duplication['dest_path'])
+                    print(f"Duplicated: {duplication['source_file']} -> {duplication['dest_filename']} (replaced '{duplication['found_keyword']}' with '{duplication['new_keyword']}')")
+                    
+                except Exception as copy_error:
+                    print(f"Error copying {duplication['source_file']} to {duplication['dest_filename']}: {str(copy_error)}")
+                    continue
+            
+            # Print summary
+            if duplicated_files:
+                print(f"\nSuccessfully duplicated {len(duplicated_files)} JSON files:")
+                for file_path in duplicated_files:
+                    print(f"  {os.path.basename(file_path)}")
+            else:
+                print("No files were duplicated")
+                
+            return duplicated_files
+            
+        except Exception as e:
+            print(f"Error duplicating material JSON files: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return []

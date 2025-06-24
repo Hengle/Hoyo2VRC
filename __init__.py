@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Hoyo2VRC",
     "author": "Meliodas",
-    "version": (5, 1, 0),
+    "version": (5, 2, 0),
     "blender": (4, 0, 0),
     "location": "View3D > UI > Hoyo2VRC",
     "description": "Convert Hoyoverse models to VRChat",

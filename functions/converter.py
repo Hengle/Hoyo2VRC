@@ -91,6 +91,7 @@ class converter:
         settings = {
             'merge_all_meshes': context.scene.merge_all_meshes,
             'generate_shape_keys': context.scene.generate_shape_keys,
+            'generate_shape_keys_mmd': context.scene.generate_shape_keys_mmd,
             'keep_star_eye_mesh': context.scene.keep_star_eye_mesh,
         }
         
@@ -346,6 +347,127 @@ class converter:
                 }
             }
             ModelUtils.generate_shape_keys(context, shape_key_config)
+        
+        # Generate MMD shape keys if enabled
+        if settings.get('generate_shape_keys_mmd', False):
+            shape_key_configMMD = {
+                "target_objects": {
+                    "Face": ["Mouth_A01", "Mouth_Fury01", "Mouth_Open01"],
+                    "Face_Eye": ["Eye_WinkA_L", "Eye_WinkA_R", "Eye_WinkB_L", "Eye_WinkB_R", "Eye_WinkC_L", "Eye_WinkC_R"]
+                },
+                "fallback_keys": [
+                    {
+                        "missing_key": "Mouth_Fury01",
+                        "fallback_key": "Mouth_Open01",
+                        "fallback_value": 0.5
+                    }
+                ],
+                "generated_keys": {
+                    "真面目": [
+                        {"object": "Face", "source_key": "Brow_Angry_L", "value": 0.5},
+                        {"object": "Face", "source_key": "Brow_Angry_R", "value": 0.5}
+                    ],
+                    "困る": [
+                        {"object": "Face", "source_key": "Brow_Trouble_L", "value": 1},
+                        {"object": "Face", "source_key": "Brow_Trouble_R", "value": 1}
+                    ],
+                    "にこり": [
+                        {"object": "Face", "source_key": "Brow_Smily_L", "value": 1.0},
+                        {"object": "Face", "source_key": "Brow_Smily_R", "value": 1.0}
+                    ],
+                    "怒り": [
+                        {"object": "Face", "source_key": "Brow_Angry_L", "value": 1},
+                        {"object": "Face", "source_key": "Brow_Angry_R", "value": 1}
+                    ],
+                    "上": [
+                        {"object": "Face", "source_key": "Brow_Up_L", "value": 1},
+                        {"object": "Face", "source_key": "Brow_Up_R", "value": 1}
+                    ],
+                    "下": [
+                        {"object": "Face", "source_key": "Brow_Down_L", "value": 1},
+                        {"object": "Face", "source_key": "Brow_Down_R", "value": 1}
+                    ],
+                    "まばたき": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkB_L", "value": 1.0},
+                        {"object": "Face_Eye", "source_key": "Eye_WinkB_R", "value": 1.0}
+                    ],
+                    "ウィンク２": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkB_L", "value": 1.0},
+                    ],
+                    "ｳｨﾝｸ２右": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkB_R", "value": 1.0},
+                    ],
+                    "笑い": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkA_L", "value": 1.0},
+                        {"object": "Face_Eye", "source_key": "Eye_WinkA_R", "value": 1.0}
+                    ],
+                     "ウィンク": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkA_L", "value": 1.0},
+                    ],
+                    "ウィンク右": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkA_R", "value": 1.0},
+                    ],
+                    "なごみ": [
+                        {"object": "Face_Eye", "source_key": "Eye_WinkC_L", "value": 1.0},
+                        {"object": "Face_Eye", "source_key": "Eye_WinkC_R", "value": 1.0}
+                    ],
+                    "びっくり": [
+                        {"object": "Face_Eye", "source_key": "Eye_Ha", "value": 1.0},
+                    ],
+                    "じと目": [
+                        {"object": "Face_Eye", "source_key": "Eye_Jito", "value": 1.0},
+                    ],
+                    "細目": [
+                        {"object": "Face_Eye", "source_key": "Eye_Lowereyelid", "value": 1.0},
+                    ],
+                    "あ": [
+                        {"object": "Face", "source_key": "Mouth_A01", "value": 1.0}
+                    ],
+                    "い": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Angry02", "value": 0.5},
+                    ],
+                    "う": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Line02", "value": 1.0},
+                        {"object": "Face_Eye", "source_key": "Mouth_Open01", "value": 1.0},
+                    ],
+                    "え": [
+                        {"object": "Face_Eye", "source_key": "Mouth_A01", "value": 0.5},
+                    ],
+                    "お": [
+                        {"object": "Face", "source_key": "Mouth_Line02", "value": 1},
+                        {"object": "Face", "source_key": "Mouth_A01", "value": 0.5}
+                    ],
+                    "▲": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Line02", "value": 1.0},
+                        {"object": "Face_Eye", "source_key": "Mouth_Open01", "value": 0.25},
+                    ],
+                    "∧": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Line02", "value": 1.0},
+                    ],
+                    "ω": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Neko01", "value": 1.0},
+                    ],
+                    "にやり": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Smile01", "value": 1.0},
+                    ],
+                    "はんっ！": [
+                        {"object": "Face_Eye", "source_key": " ", "value": 1.0},
+                    ],
+                    "ぎゃーす": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Angry01", "value": 1.0},
+                    ],
+                    "がーん": [
+                        {"object": "Face_Eye", "source_key": " ", "value": 1.0},
+                    ],
+                    "ギギギ": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Angry02", "value": 1.0},
+                    ],
+                    "ぺろっ": [
+                        {"object": "Face_Eye", "source_key": "Mouth_Pero02", "value": 1.0},
+                    ]
+                }
+            }
+            ModelUtils.generate_shape_keys(context, shape_key_configMMD)
 
         # Convert Eyes
         bones_to_duplicate = {
@@ -357,10 +479,10 @@ class converter:
             "Left Eye": "+EyeBone L A02",
             "Right Eye": "+EyeBone R A02"
         }
-        ArmatureUtils.duplicate_bones_with_weights(context, bones_to_duplicate, weight_source_bones, "Body")
+        # Check if Pupil mesh exists, otherwise use Body
+        target_mesh = "Pupil" if bpy.data.objects.get("Pupil") else "Body"
+        ArmatureUtils.duplicate_bones_with_weights(context, bones_to_duplicate, weight_source_bones, target_mesh)
         
-
-
         for eye_bone in ["Left Eye", "Right Eye"]:
 
 
@@ -384,8 +506,12 @@ class converter:
         else:
             ModelUtils.merge_meshes_by_distance(context, "Face", ["Face_Eye", "Brow"], "Mouth_A01")  
 
+        # Modify Bangs Materials
+        ModelUtils.assign_modified_material(context, search_keywords=["Bang", "Bangs"], new_suffix="Bangs")
         # Reorder UV Maps
         ModelUtils.reorder_uv_maps(context)
+        # Move Armature to Ground
+        ArmatureUtils.move_armature_to_ground(context)
         # Merge All Meshes
         if settings.get('merge_all_meshes', False):
             ModelUtils.merge_all_meshes(context)
@@ -393,6 +519,8 @@ class converter:
         SceneUtils.fix_materials(context)
         # Get import directory from armature if available
         SceneUtils.fix_material_textures(context)
+        # Duplicate material json
+        SceneUtils.duplicate_material_json(context, search_keywords="Hair", new_keywords="Bangs")
         # Set root name before cleanup
         SceneUtils.set_root_name(context)
         # Clean up selection state last
@@ -557,20 +685,138 @@ class converter:
                         {"object": "Face", "source_key": "O", "value": 0.15}
                     ],
                     "Blink": [
-                        {"object": "Face_Eye", "source_key": "Eye_WinkB_L", "value": 1.0},
-                        {"object": "Face_Eye", "source_key": "Eye_WinkB_R", "value": 1.0}
+                        {"object": "Face_Eye", "source_key": "00_Close01_Eye", "value": 1.0},
                     ],
                     "Happy Blink": [
-                        {"object": "Face_Eye", "source_key": "Eye_WinkA_L", "value": 1.0},
-                        {"object": "Face_Eye", "source_key": "Eye_WinkA_R", "value": 1.0}
+                        {"object": "Face_Eye", "source_key": "00_Close02_Eye", "value": 1.0},
                     ],
                     "Pensive Blink": [
-                        {"object": "Face_Eye", "source_key": "Eye_WinkC_L", "value": 1.0},
-                        {"object": "Face_Eye", "source_key": "Eye_WinkC_R", "value": 1.0}
+                        {"object": "Face_Eye", "source_key": "00_Close03_Eye", "value": 1.0},
                     ]
                 }
             }
             ModelUtils.generate_shape_keys(context, shape_key_config)
+        
+        # Generate MMD shape keys if enabled
+        if settings.get('generate_shape_keys_mmd', False):
+            shape_key_configMMD = {
+                "target_objects": {
+                    "Face": ["Mouth_00_A", "Mouth_00_O", "Mouth_00_Delta02"],
+                },
+                "fallback_keys": [
+                    {
+                        "missing_key": "Mouth_00_A",
+                        "fallback_key": "Mouth_01_A",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Mouth_00_O",
+                        "fallback_key": "Mouth_01_O",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Mouth_00_Delta02",
+                        "fallback_key": "Mouth_01_Delta02",
+                        "fallback_value": 0.5
+                    }
+                ],
+                "generated_keys": {
+                    "真面目": [
+                        {"object": "Face", "source_key": "Brow_00_Angry", "value": 0.5},
+                    ],
+                    "困る": [
+                        {"object": "Face", "source_key": "Brow_00_Trouble", "value": 1},
+                    ],
+                    "にこり": [
+                        {"object": "Face", "source_key": "Brow_00_Gentle", "value": 1.0},
+                    ],
+                    "怒り": [
+                        {"object": "Face", "source_key": "Brow_00_Angry", "value": 1},
+                    ],
+                    "上": [
+                        {"object": "Face", "source_key": "Brow_00_Up", "value": 1},
+                    ],
+                    "下": [
+                        {"object": "Face", "source_key": "Brow_00_Down", "value": 1},
+                    ],
+                    "まばたき": [
+                        {"object": "Face", "source_key": "00_Close01_Eye", "value": 1.0},
+                    ],
+                    "ウィンク２": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ｳｨﾝｸ２右": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "笑い": [
+                        {"object": "Face", "source_key": "00_Close02_Eye", "value": 1.0},
+                    ],
+                     "ウィンク": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ウィンク右": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "なごみ": [
+                        {"object": "Face", "source_key": "00_Close01_Eye", "value": 1.0},
+                        {"object": "Face", "source_key": "00_Close01_Eye", "value": 1.0}
+                    ],
+                    "びっくり": [
+                        {"object": "Face", "source_key": "Eye_00_Surprise01", "value": 1.0},
+                    ],
+                    "じと目": [
+                        {"object": "Face", "source_key": "Eye_00_Doubt01", "value": 1.0},
+                    ],
+                    "細目": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "あ": [
+                        {"object": "Face", "source_key": "Mouth_00_A", "value": 1.0}
+                    ],
+                    "い": [
+                        {"object": "Face", "source_key": "Mouth_00_I", "value": 0.5},
+                    ],
+                    "う": [
+                        {"object": "Face", "source_key": "Mouth_00_U", "value": 1.0},
+                    ],
+                    "え": [
+                        {"object": "Face", "source_key": "Mouth_00_E", "value": 0.5},
+                    ],
+                    "お": [
+                        {"object": "Face", "source_key": "Mouth_00_O", "value": 1},
+                    ],
+                    "▲": [
+                        {"object": "Face", "source_key": "Mouth_00_Narrow", "value": 1.0},
+                        {"object": "Face", "source_key": "Mouth_00_O", "value": 0.5},
+                    ],
+                    "∧": [
+                        {"object": "Face", "source_key": "Mouth_00_Narrow", "value": 1.0},
+                    ],
+                    "ω": [
+                        {"object": "Face", "source_key": "Mouth_01_Angry01", "value": -1.0},
+                    ],
+                    "にやり": [
+                        {"object": "Face", "source_key": "Mouth_00_Smile01", "value": 1.0},
+                    ],
+                    "はんっ！": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ぎゃーす": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "がーん": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ギギギ": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ぺろっ": [
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ]
+                }
+            }
+            ModelUtils.generate_shape_keys(context, shape_key_configMMD)
+
         # Clear Animations
         ModelUtils.clear_animations(context)
         # Rename Bones
@@ -711,10 +957,16 @@ class converter:
         ModelUtils.reorder_uv_maps(context)
         # Apply Face Mask
         ModelUtils.merge_and_weight_meshes(context, source_mesh="Face_Mask", target_mesh="Face", reweight=True, bone_name="Head", weight=1.0, vertex_group="Head")
+        # Separate Bangs
+        ArmatureUtils.separate_bangs_by_armature(context, hair_obj="Hair", armature_obj=armature, bone_keywords=["Hair"], y_boundary=-0.04)
         # Fix material alpha settings
         SceneUtils.fix_materials(context)
         # Get import directory from armature if available
         SceneUtils.fix_material_textures(context)
+        # Duplicate material json
+        SceneUtils.duplicate_material_json(context, search_keywords="Hair", new_keywords="Bangs")
+        # Move Armature to Ground
+        ArmatureUtils.move_armature_to_ground(context)
         # Merge All Meshes
         if settings.get('merge_all_meshes', False):
             ModelUtils.merge_all_meshes(context)
@@ -951,6 +1203,113 @@ class converter:
             }
             ModelUtils.generate_shape_keys(context, shape_key_config)
 
+        # Generate MMD shape keys if enabled
+        if settings.get('generate_shape_keys_mmd', False):
+            shape_key_configMMD = {
+                "target_objects": {
+                    "Face": ["Mouth_00_A", "Mouth_00_O", "Mouth_00_Delta02"],
+                },
+                "fallback_keys": [
+                    {
+                        "missing_key": "Mouth_00_A",
+                        "fallback_key": "Mouth_01_A",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Mouth_00_O",
+                        "fallback_key": "Mouth_01_O",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Mouth_00_Delta02",
+                        "fallback_key": "Mouth_01_Delta02",
+                        "fallback_value": 0.5
+                    }
+                ],
+                "generated_keys": {
+                    "真面目": [
+                        {"object": "Face", "source_key": "Eyebrow_Serious", "value": 1.0},
+                    ],
+                    "困る": [
+                        {"object": "Face", "source_key": "Eyebrow_Trouble", "value": 1},
+                    ],
+                    "にこり": [
+                        {"object": "Face", "source_key": "Eyebrow_Smily", "value": 1.0},
+                    ],
+                    "怒り": [
+                        {"object": "Face", "source_key": "Eyebrow_Angry", "value": 1},
+                    ],
+                    "上": [
+                        {"object": "Face", "source_key": "Eyebrow_Up", "value": 1},
+                    ],
+                    "下": [
+                        {"object": "Face", "source_key": "Eyebrow_Down", "value": 1},
+                    ],
+                    "まばたき": [
+                         {"object": "Face", "source_key": "Eye_Wink02_L", "value": 1.0},
+                         {"object": "Face", "source_key": "Eye_Wink02_R", "value": 1.0}
+                    ],
+                    "ウィンク２": [
+                        {"object": "Face", "source_key": "Eye_Wink02_L", "value": 1.0},
+                    ],
+                    "ｳｨﾝｸ２右": [
+                        {"object": "Face", "source_key": "Eye_Wink02_R", "value": 1.0},
+                    ],
+                    "笑い": [
+                        {"object": "Face", "source_key": "Eye_Wink01_L", "value": 1.0},
+                        {"object": "Face", "source_key": "Eye_Wink01_R", "value": 1.0}
+                    ],
+                     "ウィンク": [
+                        {"object": "Face", "source_key": "Eye_Wink01_L", "value": 1.0},
+                    ],
+                    "ウィンク右": [
+                        {"object": "Face", "source_key": "Eye_Wink01_R", "value": 1.0},
+                    ],
+                    "なごみ": [
+                        {"object": "Face", "source_key": "Eye_Contempt", "value": 1.0},
+                    ],
+                    "びっくり": [
+                        {"object": "Face", "source_key": "Eye_Surprised03", "value": 1.0},
+                    ],
+                    "じと目": [
+                        {"object": "Face", "source_key": "Eye_Hostitlity", "value": 1.0},
+                    ],
+                    "細目": [
+                        {"object": "Face", "source_key": "Eye_Half01", "value": 1.0},
+                    ],
+                    "あ": [
+                        {"object": "Face", "source_key": "Mouth_A01", "value": 1.0}
+                    ],
+                    "い": [
+                        {"object": "Face", "source_key": "Mouth_I01", "value": 0.5},
+                    ],
+                    "う": [
+                        {"object": "Face", "source_key": "Mouth_U01", "value": 1.0},
+                    ],
+                    "え": [
+                        {"object": "Face", "source_key": "Mouth_E01", "value": 0.5},
+                    ],
+                    "お": [
+                        {"object": "Face", "source_key": "Mouth_O01", "value": 1},
+                    ],
+                    "▲": [
+                        {"object": "Face", "source_key": "Mouth_N01", "value": 1.0},
+                        {"object": "Face", "source_key": "Mouth_Line02", "value": 0.5},
+                    ],
+                    "∧": [
+                        {"object": "Face", "source_key": "Mouth_Line02", "value": 1.0},
+                    ],
+                    "ω": [
+                        {"object": "Face", "source_key": "Mouth_Line02", "value": 0.5},
+                        {"object": "Face", "source_key": "Mouth_Smile01", "value": 1.0}
+                    ],
+                    "にやり": [
+                        {"object": "Face", "source_key": "Mouth_Smile01", "value": 1.0},
+                    ]
+                }
+            }
+            ModelUtils.generate_shape_keys(context, shape_key_configMMD)
+
         # Convert Eyes
         bones_to_duplicate = {
             "Bone_Eye_L_01": "Left Eye",
@@ -991,6 +1350,8 @@ class converter:
 
         # Reorder UV Maps
         ModelUtils.reorder_uv_maps(context)
+        # Move Armature to Ground
+        ArmatureUtils.move_armature_to_ground(context)
         # Merge All Meshes
         if settings.get('merge_all_meshes', False):
             ModelUtils.merge_all_meshes(context)
@@ -1002,7 +1363,6 @@ class converter:
         SceneUtils.set_root_name(context)
         # Clean up selection state last
         SceneUtils.cleanup_selection(context)
-
         return True
         
     @staticmethod
@@ -1137,7 +1497,12 @@ class converter:
             "Left Foot": "Left Toes"
         }
         ArmatureUtils.attach_bones(context, bone_pairs)
-
+        # Using custom exclusion list
+        custom_exclusions = ["hair", "cloth", "accessory", "pelvis", "waist", "skirt", "spine", "arm", "leg", "chest", "neck", "head", "knee", "calf", "elbow", "skirt", "thigh", "twist"]
+        ArmatureUtils.adjust_bone_tails_to_connect(
+            context=context, 
+            exclude_substrings=custom_exclusions
+        )
         # Generate shape keys if enabled
         if settings.get('generate_shape_keys', False):
             shape_key_config = {
@@ -1230,6 +1595,246 @@ class converter:
             }
             ModelUtils.generate_shape_keys(context, shape_key_config)
 
+        # Generate MMD shape keys if enabled
+        if settings.get('generate_shape_keys_mmd', False):
+            shape_key_configMMD = {
+                "target_objects": {
+                    "Face": ["Fac_Mth_AaTalk", "Mouth_Oo1", "Mouth_00_Delta02"],
+                },
+                "fallback_keys": [
+                    {
+                        "missing_key": "Fac_Eye_HalfClose",
+                        "fallback_key": "Fac_Eye_Close",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Fac_Eye_HalfClose",
+                        "fallback_key": "Eye_Close",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Fac_Mth_R_Down",
+                        "fallback_key": "Fac_Mth_Down_R",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_L_Down",
+                        "fallback_key": "Fac_Mth_Down_L",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_R_Wink",
+                        "fallback_key": "Fac_Eye_Wink_R",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_R_Wink",
+                        "fallback_key": "Eye_Wink_R",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_L_Wink",
+                        "fallback_key": "Fac_Eye_Wink_L",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_Wink_L",
+                        "fallback_key": "Eye_Wink_L",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_L_Open",
+                        "fallback_key": "Fac_Eye_Open_L",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_L_Open",
+                        "fallback_key": "Eye_Open_L",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_R_Open",
+                        "fallback_key": "Fac_Eye_Open_R",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Eye_R_Open",
+                        "fallback_key": "Eye_Open_R",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Ebr_Sad",
+                        "fallback_key": "Eyebrow_困扰",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Ebr_Relax",
+                        "fallback_key": "Eyebrow_Relax",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Ebr_Angry",
+                        "fallback_key": "Eyebrow_Angry",
+                        "fallback_value": 1.0
+                    },                    
+                    {
+                        "missing_key": "Fac_Ebr_Up",
+                        "fallback_key": "Eyebrow_↓",
+                        "fallback_value": -1.0
+                    },                    
+                    {
+                        "missing_key": "Fac_Ebr_Down",
+                        "fallback_key": "Eyebrow_↓",
+                        "fallback_value": 1.0
+                    },                   
+                    {
+                        "missing_key": "Fac_Mth_Triangle",
+                        "fallback_key": "Mouth_△",
+                        "fallback_value": 1.0
+                    },                  
+                    {
+                        "missing_key": "Fac_Mth_AaTalk",
+                        "fallback_key": "Mouth_Talk_B",
+                        "fallback_value": 1.0
+                    },                 
+                    {
+                        "missing_key": "Fac_Mth_Ii",
+                        "fallback_key": "Mouth_Ii1",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_Uu",
+                        "fallback_key": "Mouth_U2",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_Ee",
+                        "fallback_key": "Mouth_E",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_UuOo",
+                        "fallback_key": "Mouth_Oo1",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_L_Down",
+                        "fallback_key": "Mouth_oo↘",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_R_Down",
+                        "fallback_key": "Mouth_↙oo",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_R_In",
+                        "fallback_key": "Mouth_→oo",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_L_In",
+                        "fallback_key": "Mouth_oo←",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_L_Up",
+                        "fallback_key": "Mouth_oo↗",
+                        "fallback_value": 1.0
+                    },
+                    {
+                        "missing_key": "Fac_Mth_R_Up",
+                        "fallback_key": "Mouth_↖oo",
+                        "fallback_value": 1.0
+                    },
+                ],
+                "generated_keys": {
+                    "真面目": [ # Serious
+                        {"object": "Face", "source_key": "Fac_Ebr_Angry", "value": 0.5},
+                    ],
+                    "困る": [ # Trouble
+                        {"object": "Face", "source_key": "Fac_Ebr_Sad", "value": 1},
+                    ],
+                    "にこり": [ # Smily
+                        {"object": "Face", "source_key": "Fac_Ebr_Relax", "value": 1.0},
+                    ],
+                    "怒り": [ # Angry
+                        {"object": "Face", "source_key": "Fac_Ebr_Angry", "value": 1},
+                    ],
+                    "上": [ # Up
+                        {"object": "Face", "source_key": "Fac_Ebr_Up", "value": 1},
+                    ],
+                    "下": [ # Down
+                        {"object": "Face", "source_key": "Fac_Ebr_Down", "value": 1},
+                    ],
+                    "まばたき": [ # Blink
+                        {"object": "Face", "source_key": "Fac_Eye_Close", "value": 1.0},
+                    ],
+                    "ウィンク２": [ # Wink 2 L
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ｳｨﾝｸ２右": [ # Wink 2 R
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "笑い": [ # Smile
+                        {"object": "Face", "source_key": "Fac_Eye_L_Wink", "value": 1.0},
+                        {"object": "Face", "source_key": "Fac_Eye_R_Wink", "value": 1.0},
+                    ],
+                    "ウィンク": [ # Wink L
+                        {"object": "Face", "source_key": "Fac_Eye_L_Wink", "value": 1.0},
+                    ],
+                    "ウィンク右": [ # Wink R
+                        {"object": "Face", "source_key": "Fac_Eye_R_Wink", "value": 1.0},
+                    ],
+                    "なごみ": [ # Howawa
+                        {"object": "Face", "source_key": "Fac_Eye_Close", "value": 1.0},
+                    ],
+                    "びっくり": [ # Surprise
+                        {"object": "Face", "source_key": "Fac_Eye_R_Open", "value": 1.0}, 
+                        {"object": "Face", "source_key": "Fac_Eye_L_Open", "value": 1.0} 
+                    ],
+                    "じと目": [ # Doubt
+                        {"object": "Face", "source_key": "Fac_Eye_HalfClose", "value": 1.0},
+                    ],
+                    "細目": [ # Half Closed
+                        {"object": "Face", "source_key": "Fac_Eye_HalfClose", "value": 0.5},
+                    ],
+                    "あ": [ # A
+                        {"object": "Face", "source_key": "Fac_Mth_AaTalk", "value": 1.0}
+                    ],
+                    "い": [ # I
+                        {"object": "Face", "source_key": "Fac_Mth_Ii", "value": 0.5},
+                    ],
+                    "う": [ # U
+                        {"object": "Face", "source_key": "Fac_Mth_Uu", "value": 1.0},
+                    ],
+                    "え": [ # E
+                        {"object": "Face", "source_key": "Fac_Mth_Ee", "value": 0.5},
+                    ],
+                    "お": [ # O
+                        {"object": "Face", "source_key": "Fac_Mth_UuOo", "value": 1},
+                    ],
+                    "▲": [ # Triangle Open
+                        {"object": "Face", "source_key": "Fac_Mth_Triangle", "value": 1.0},
+                    ],
+                    "∧": [ # Triangle Closed
+                        {"object": "Face", "source_key": "Fac_Mth_L_Down", "value": 0.5},
+                        {"object": "Face", "source_key": "Fac_Mth_R_Down", "value": 0.5},
+                        {"object": "Face", "source_key": "Fac_Mth_R_In", "value": 1.0},
+                        {"object": "Face", "source_key": "Fac_Mth_L_In", "value": 1.0},
+                    ],
+                    "ω": [ # :3
+                        {"object": "Face", "source_key": "Fac_Mth_L_Up", "value": 1.0},
+                        {"object": "Face", "source_key": "Fac_Mth_R_Up", "value": 1.0},
+                    ],
+                    "にやり": [ # Smily 
+                        {"object": "Face", "source_key": "Fac_Mth_L_Up", "value": 1.0},
+                        {"object": "Face", "source_key": "Fac_Mth_R_Up", "value": 1.0},
+                    ]
+                }
+            }
+            ModelUtils.generate_shape_keys(context, shape_key_configMMD)
+
         # Convert Eyes
         # Check if first set of bones exist
         if any(bone in context.active_object.data.bones for bone in ["Skn_L_Eye", "Skn_R_Eye"]):
@@ -1238,8 +1843,8 @@ class converter:
                 "Skn_R_Eye": "Right Eye"
             }
             weight_source_bones = {
-                "Left Eye": "Skn_L_Eye", 
-                "Right Eye": "Skn_R_Eye"
+                "Left Eye": ["Skn_L_Eye", "Skn_L_Highlights"], 
+                "Right Eye": ["Skn_R_Eye", "Skn_R_Highlights"]
             }
         else:
             bones_to_duplicate = {
@@ -1247,8 +1852,8 @@ class converter:
                 "Bdy_L_Eye": "Left Eye"
             }
             weight_source_bones = {
-                "Left Eye": "Bdy_L_Eye",
-                "Right Eye": "Bdy_R_Eye" 
+                "Left Eye": ["Bdy_L_Eye", "Bdy_L_Highlights"],
+                "Right Eye": ["Bdy_R_Eye", "Bdy_R_Highlights"] 
             }
         ArmatureUtils.duplicate_bones_with_weights(context, bones_to_duplicate, weight_source_bones, "Face")
 
@@ -1269,15 +1874,12 @@ class converter:
                 }
             )
 
-        # Separate Eyes by Vertex Color
-        ModelUtils.separate_eye_ui_by_vertex_colors(
-            mesh_name_contains="Face",
-            source_material_contains="Eye_UI",
-            shadow_material_name="EyeShadow_UI",
-            highlight_material_name="EyeHi_UI"
-        )
+        # Convert vertex colors to UV for eye materials
+        ModelUtils.convert_vertex_colors_to_uv(context, target_object="Face", color_multiplier=255)
         # Reorder UV Maps
         ModelUtils.reorder_uv_maps(context)
+        # Move Armature to Ground
+        ArmatureUtils.move_armature_to_ground(context)
         # Merge All Meshes
         if settings.get('merge_all_meshes', False):
             ModelUtils.merge_all_meshes(context)
@@ -1285,6 +1887,8 @@ class converter:
         SceneUtils.fix_materials(context)
         # Get import directory from armature if available
         SceneUtils.fix_material_textures(context)
+        # Duplicate material json
+        SceneUtils.duplicate_material_json(context, search_keywords=["Eye"], new_keywords=["EyeHi", "EyeShadow"], exclude_keywords=["Eyebrow"])
         # Set root name before cleanup
         SceneUtils.set_root_name(context)
         # Clean up selection state last
@@ -1520,7 +2124,115 @@ class converter:
                 }
             }
             ModelUtils.generate_shape_keys(context, shape_key_config)
+        
+        # Generate MMD shape keys if enabled
+        if settings.get('generate_shape_keys_mmd', False):
+            shape_key_configMMD = {
+                "target_objects": {
+                    "Face": ["Fac_Mth_AaTalk", "Mouth_Oo1", "Mouth_00_Delta02"],
+                },
+                "fallback_keys": [
+                    {
+                        "missing_key": "Fac_Eye_HalfClose",
+                        "fallback_key": "Fac_Eye_Close",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Fac_Eye_HalfClose",
+                        "fallback_key": "Eye_Close",
+                        "fallback_value": 0.5
+                    },
+                    {
+                        "missing_key": "Fac_Mth_R_Down",
+                        "fallback_key": "Fac_Mth_Down_R",
+                        "fallback_value": 1.0
+                    },
+                ],
+                "generated_keys": {
+                    "真面目": [ # Serious
+                        {"object": "Face", "source_key": "B_Anger", "value": 0.5},
+                    ],
+                    "困る": [ # Trouble
+                        {"object": "Face", "source_key": "B_Sad", "value": 1},
+                    ],
+                    "にこり": [ # Smily
+                        {"object": "Face", "source_key": "B_Happy", "value": 1.0},
+                    ],
+                    "怒り": [ # Angry
+                        {"object": "Face", "source_key": "B_Anger", "value": 1},
+                    ],
+                    "上": [ # Up
+                        {"object": "Face", "source_key": "B_Up_Add", "value": 1},
+                    ],
+                    "下": [ # Down
+                        {"object": "Face", "source_key": "B_Down_Add", "value": 1},
+                    ],
+                    "まばたき": [ # Blink
+                        {"object": "Face", "source_key": "E_Close", "value": 1.0},
+                    ],
+                    "ウィンク２": [ # Wink 2 L
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "ｳｨﾝｸ２右": [ # Wink 2 R
+                        {"object": "Face", "source_key": " ", "value": 1.0},
+                    ],
+                    "笑い": [ # Smile
+                        {"object": "Face", "source_key": "E_Smile_R", "value": 1.0},
+                        {"object": "Face", "source_key": "E_Smile_L", "value": 1.0},
+                    ],
+                    "ウィンク": [ # Wink L
+                        {"object": "Face", "source_key": "E_Smile_L", "value": 1.0},
+                    ],
+                    "ウィンク右": [ # Wink R
+                        {"object": "Face", "source_key": "E_Smile_R", "value": 1.0},
+                    ],
+                    "なごみ": [ # Howawa
+                        {"object": "Face", "source_key": "E_Insipid", "value": 1.0},
+                    ],
+                    "びっくり": [ # Surprise
+                        {"object": "Face", "source_key": "E_Stare", "value": 1.0}, 
+                    ],
+                    "じと目": [ # Doubt
+                        {"object": "Face", "source_key": "E_Insipid", "value": 1.0},
+                    ],
+                    "細目": [ # Half Closed
+                        {"object": "Face", "source_key": "E_Close", "value": 0.5},
+                    ],
+                    "あ": [ # A
+                        {"object": "Face", "source_key": "Aa", "value": 1.0}
+                    ],
+                    "い": [ # I
+                        {"object": "Face", "source_key": "I", "value": 0.5},
+                    ],
+                    "う": [ # U
+                        {"object": "Face", "source_key": "U", "value": 1.0},
+                    ],
+                    "え": [ # E
+                        {"object": "Face", "source_key": "E", "value": 0.5},
+                    ],
+                    "お": [ # O
+                        {"object": "Face", "source_key": "O", "value": 1},
+                    ],
+                    "▲": [ # Triangle Open
+                        {"object": "Face", "source_key": "M_OpenSmall", "value": 1.0},
+                    ],
+                    "∧": [ # Triangle Closed
+                        {"object": "Face", "source_key": "M_Nutcracker", "value": 1.0},
+                    ],
+                    "ω": [ # :3
+                        {"object": "Face", "source_key": "M_Smile_R", "value": 1.0},
+                        {"object": "Face", "source_key": "M_Smile_L", "value": 1.0}
+                    ],
+                    "にやり": [ # Smily 
+                        {"object": "Face", "source_key": "M_Smile_R", "value": 1.0},
+                        {"object": "Face", "source_key": "M_Smile_L", "value": 1.0}
+                    ]
+                }
+            }
+            ModelUtils.generate_shape_keys(context, shape_key_configMMD)
 
+        # Move Armature to Ground
+        ArmatureUtils.move_armature_to_ground(context)
         # Reorder UV Maps
         ModelUtils.reorder_uv_maps(context)
         # Set root name before cleanup
@@ -1794,6 +2506,8 @@ class converter:
         # Merge All Meshes
         if settings.get('merge_all_meshes', False):
             ModelUtils.merge_all_meshes(context)
+        # Move Armature to Ground
+        ArmatureUtils.move_armature_to_ground(context)
         # Fix material alpha settings
         SceneUtils.fix_materials(context)
         # Get import directory from armature if available
