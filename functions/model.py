@@ -1257,9 +1257,18 @@ class ModelUtils:
         if not context:
             context = bpy.context
             
-        # Get target object
+        # Get target object (case insensitive)
         if target_object:
-            obj = bpy.data.objects.get(target_object)
+            obj = None
+            # Search for object case-insensitively
+            for scene_obj in bpy.data.objects:
+                if scene_obj.name.lower() == target_object.lower():
+                    obj = scene_obj
+                    break
+            
+            if not obj:
+                print(f"No object found with name '{target_object}' (case insensitive)")
+                return False
         else:
             obj = context.active_object
             
