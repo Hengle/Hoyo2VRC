@@ -1149,11 +1149,16 @@ class ModelUtils:
                             if sk_name in left_eye.data.shape_keys.key_blocks:
                                 left_eye.data.shape_keys.key_blocks[sk_name].value = value
                                 
-                        # Keep only pupil shape keys
+                        # Keep Basis (essential for proper eye mesh) and pupil shape keys only
                         shape_keys_to_remove = []
                         for shape_key in left_eye.data.shape_keys.key_blocks:
-                            if shape_key.name == 'Basis' or shape_key.name in unused_shape_keys:
+                            # Always preserve Basis - without it, pupil shapes become default
+                            if shape_key.name == 'Basis':
                                 continue
+                            # Keep pupil shape keys on eye meshes
+                            if unused_shape_keys and shape_key.name in unused_shape_keys:
+                                continue
+                            # Remove all other shape keys (facial expressions, etc.)
                             shape_keys_to_remove.append(shape_key.name)
                         
                         if shape_keys_to_remove:
@@ -1195,11 +1200,16 @@ class ModelUtils:
                             if sk_name in right_eye.data.shape_keys.key_blocks:
                                 right_eye.data.shape_keys.key_blocks[sk_name].value = value
                                 
-                        # Keep only pupil shape keys
+                        # Keep Basis (essential for proper eye mesh) and pupil shape keys only
                         shape_keys_to_remove = []
                         for shape_key in right_eye.data.shape_keys.key_blocks:
-                            if shape_key.name == 'Basis' or shape_key.name in unused_shape_keys:
+                            # Always preserve Basis - without it, pupil shapes become default
+                            if shape_key.name == 'Basis':
                                 continue
+                            # Keep pupil shape keys on eye meshes
+                            if unused_shape_keys and shape_key.name in unused_shape_keys:
+                                continue
+                            # Remove all other shape keys (facial expressions, etc.)
                             shape_keys_to_remove.append(shape_key.name)
                         
                         if shape_keys_to_remove:
