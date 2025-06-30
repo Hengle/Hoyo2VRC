@@ -1185,13 +1185,28 @@ class ArmatureUtils:
             print("❌ Hair object has no materials to duplicate.")
             return False
 
-        # Create bangs material by duplicating original hair material
-        bangs_material = original_hair_material.copy()
-        bangs_material.name = original_hair_material.name.replace("Hair", "Bangs")
+        # Check if bangs material already exists
+        expected_bangs_name = original_hair_material.name.replace("Hair", "Bangs")
+        bangs_material = None
+        bangs_material_index = -1
         
-        # Add bangs material to the hair object
-        hair_obj.data.materials.append(bangs_material)
-        bangs_material_index = len(hair_obj.data.materials) - 1
+        # Look for existing bangs material in the hair object
+        for i, material in enumerate(hair_obj.data.materials):
+            if material and material.name == expected_bangs_name:
+                bangs_material = material
+                bangs_material_index = i
+                print(f"✅ Found existing bangs material '{bangs_material.name}' at index {i}.")
+                break
+        
+        # Create bangs material if it doesn't exist
+        if bangs_material is None:
+            bangs_material = original_hair_material.copy()
+            bangs_material.name = expected_bangs_name
+            
+            # Add bangs material to the hair object
+            hair_obj.data.materials.append(bangs_material)
+            bangs_material_index = len(hair_obj.data.materials) - 1
+            print(f"✅ Created new bangs material '{bangs_material.name}' at index {bangs_material_index}.")
 
         # Make sure we're working with the hair object only
         bpy.ops.object.select_all(action='DESELECT')
