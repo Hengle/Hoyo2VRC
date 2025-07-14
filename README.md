@@ -1,6 +1,6 @@
 <br>
 <p align="center">
-    <a href="https://github.com/Melioli/Hoyo2VRC"><img src="https://github.com/user-attachments/assets/372da619-e9eb-4199-986c-63b9094d686c" alt="Hoyo2VRC"/></a>
+    <a href="https://github.com/Melioli/Hoyo2VRC"><img src="https://github.com/user-attachments/assets/accf870d-4b6a-4341-8199-be49cd70088f" alt="Hoyo2VRC"/></a>
 
 
     
@@ -25,7 +25,8 @@
 
 ## Features
 
-- **Support for Hoyoverse Models**: The addon is compatible with models from Honkai Impact (Part 1 and 2), Genshin Impact, and Honkai Star Rail.
+- **Support for Hoyoverse Models**: The addon is compatible with models from Genshin Impact, Honkai Impact (Part 1 & 2), Honkai Star Rail, and Zenless Zone Zero
+- **Support for Wuthering Waves**: The addon is compatible with models from Wuthering Waves.
 - **Built in FBX Importer/Exporter**: Addons like BetterFBX are not needed anymore.
 - **Built-in support for [HoyoToon](https://github.com/Melioli/HoyoToon)**: Your models will always be in the perfect state for use with **[HoyoToon](https://github.com/Melioli/HoyoToon)**.
 - **Automated Conversion**: The add-on automatically transforms raw datamined assets into VRChat avatars. Detailed information about the fixes and features implemented by the conversion buttons can be found in our [documentation](https://docs.hoyotoon.com/Hoyo2VRC/Features).
