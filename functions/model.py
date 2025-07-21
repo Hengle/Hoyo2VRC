@@ -346,7 +346,7 @@ class ModelUtils:
             
         try:
             # Store current mode
-            prev_mode = SceneUtils.ensure_mode(context, 'OBJECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
             
             # Get target object
             target = bpy.data.objects.get(target_object)
@@ -388,7 +388,7 @@ class ModelUtils:
                 bpy.ops.object.join()
             
             # Switch to edit mode and merge vertices
-            SceneUtils.ensure_mode(context, 'EDIT')
+            bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.remove_doubles(threshold=threshold)
             bpy.ops.mesh.select_all(action='DESELECT')
@@ -400,7 +400,7 @@ class ModelUtils:
                     target.active_shape_key_index = original_shape_key_index
             
             # Restore original mode and cleanup
-            SceneUtils.restore_mode(context, prev_mode)
+            bpy.ops.object.mode_set(mode='OBJECT')
             SceneUtils.cleanup_selection(context)
             
             return True
